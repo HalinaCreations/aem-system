@@ -805,6 +805,51 @@ async function bulkInsert<T>(
 
 // ─── Phase 8: closed interventions across all 4 scopes ──────────────────────
 
+// A few counselor-authored notes on active-year students. These exist so the
+// counselor-only read path is exercised by real data — `verify-rbac-scope.ts`
+// asserts that every non-counselor role gets zero rows back, and that check is
+// vacuous if no note exists. Idempotent via the marker prefix.
+const NOTE_MARKER = "[demo]";
+
+async function createDemoCounselingNotes(
+  yearMap: Map<string, { id: string }>,
+  enrollments: DemoEnrollment[],
+) {
+  const counselor = await prisma.user.findUnique({ where: { email: "counselor@school.edu" } });
+  if (!counselor) {
+    console.warn("  counselor@school.edu not found; skipping counseling notes");
+    return;
+  }
+
+  const existing = await prisma.counselingNote.count({ where: { body: { startsWith: NOTE_MARKER } } });
+  if (existing > 0) {
+    console.log(`  counseling notes: 0 created, ${existing} skipped (already present)`);
+    return;
+  }
+
+  const activeYearId = yearMap.get("SY 2025-2026")!.id;
+  const targets = enrollments.filter((e) => e.schoolYearId === activeYearId).slice(0, 3);
+
+  const bodies = [
+    "Intake conversation. Student reports difficulty concentrating during afternoon classes and worry about a family member's health. Agreed to a weekly check-in.",
+    "Follow-up. Attendance has stabilised since the check-ins began. Student asked about study-skills support ahead of Q3 exams.",
+    "Adviser flagged withdrawal from group work. Student says the peer group changed sections; discussed options for re-engaging.",
+  ];
+
+  let created = 0;
+  for (let i = 0; i < targets.length; i++) {
+    await prisma.counselingNote.create({
+      data: {
+        enrollmentId: targets[i].id,
+        authorId: counselor.id,
+        body: `${NOTE_MARKER} ${bodies[i]}`,
+      },
+    });
+    created++;
+  }
+  console.log(`  counseling notes: ${created} created`);
+}
+
 async function createDemoInterventions(
   yearMap: Map<string, { id: string }>,
   enrollments: DemoEnrollment[],
@@ -1260,6 +1305,9 @@ async function main() {
 
   console.log("→ Demo interventions");
   await createDemoInterventions(yearMap, enrollments);
+
+  console.log("→ Demo counseling notes");
+  await createDemoCounselingNotes(yearMap, enrollments);
 
   console.log("→ Risk engine per year");
   await runEngineForAllYears(yearMap);

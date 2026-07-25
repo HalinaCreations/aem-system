@@ -312,8 +312,3 @@ export function computeRiskScore(input: ScoringInput): ScoringResult {
   return { score, band, factors };
 }
 
-// ─── Band helpers (UI use) ───────────────────────────────────────────────────
-
-export function bandColor(band: RiskBandLabel): "green" | "amber" | "red" {
-  return band === "HIGH" ? "red" : band === "MODERATE" ? "amber" : "green";
-}

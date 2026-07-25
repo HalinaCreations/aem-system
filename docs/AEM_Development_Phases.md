@@ -583,7 +583,7 @@ Ready for Phase 3 (Intervention Module) or Phase 4 (Algorithmic Engine), dependi
 **Goal:** Insights are visible at every level. Cohort comparison works across years.
 
 ### 5.1 Teacher Dashboards *(✅ 2026-05-15 — covered by existing surfaces + new card)*
-- [x] Class-level risk distribution + top-3 at-risk students card on [app/teacher/my-classes/[classId]/page.tsx](app/teacher/my-classes/[classId]/page.tsx) via [components/roles/teacher/section-risk-card.tsx](components/roles/teacher/section-risk-card.tsx)
+- [x] Class-level risk distribution + at-risk students on [app/teacher/my-classes/[classId]/page.tsx](app/teacher/my-classes/[classId]/page.tsx) — fed by `getSectionRiskForTeacher` and rendered inside [class-detail.tsx](../components/roles/teacher/class-detail.tsx). *(Corrected 2026-07-25: this line previously credited a `section-risk-card.tsx` component. That file existed but was never imported by any page — the functionality was built inline in `class-detail.tsx` instead. The orphan was deleted in Phase 8.0.4.)*
 - [x] Pattern Alerts: teacher consumes student-scope patterns via the existing [/teacher/student-risk](app/teacher/student-risk/page.tsx) per-section table and the per-class detail page. (Dedicated alerts panel can be split out later if needed.)
 - [x] At-Risk Students panel sorted by score — already live on [/teacher/student-risk](app/teacher/student-risk/page.tsx)
 - [x] Attendance + performance trends — present on existing class detail tabs
@@ -918,6 +918,42 @@ Teachers could see at-risk students daily but had no path to initiate an interve
 - Engine re-run across all 3 SYs. **Band distribution unchanged** (23-24: 240 LOW · 24-25: 240 LOW · 25-26: 209 LOW / 40 MODERATE / 1 HIGH); all 8 pattern rules still fire at identical counts. 730/730 assessments now carry the breakdown key; 480 carry a non-zero contribution, spread 0/10/25/40/80.
 - No bands flipped because the admin-configured weight for this dimension is **0.05** — an 80 sub-score moves the total by 4 points. The dimension is live and correct; whether 0.05 is the right weight is now a tunable policy question for the principal/admin, not a code gap.
 - `npx tsc --noEmit` clean · `npm run lint` clean · `npm run build` clean (37 routes) · counselor + admin route smoke 200, explainability panel renders the new detail block on a real profile.
+
+### 8.0.4 Dead-code and unreachable-feature sweep *(✅ 2026-07-25)*
+
+A codebase audit run before starting Slice A, after the coverage review raised "is anything here not needed?". Three categories came back.
+
+**1. `lib/rbac.ts` was not enforcing anything — deleted.** It exported `studentVisibilityFilter` / `enrollmentVisibilityFilter` / `canReadCounselingContent`, and **no application code called any of them**; the only consumer was `verify-rbac-scope.ts`, the script that tested it. [CLAUDE.md](../CLAUDE.md) names the query layer as the third RBAC tier and Phase 2a records this module as its implementation, so a reader would reasonably conclude enforcement lived here. It did not.
+
+Enforcement is real, just implemented differently: every teacher-facing query takes the caller's `userId` and verifies assignment ownership itself (`getTeacherClassDetail`, `getSectionRiskForTeacher`, `canTeacherReferStudent`), `getCounselingNotes` short-circuits non-counselors, and `canViewIntervention` holds the visibility matrix. **That pattern is stronger than a composable `where` fragment** — you cannot call the function without passing `userId`, whereas a fragment can be forgotten at any call site. So the fix was to delete the unused abstraction, not to retrofit it.
+
+The real cost was the false assurance: `verify-rbac-scope.ts` was green while testing code production never ran. It has been rewritten to assert against the actual helpers — **18 assertions** covering teacher class scoping, cross-teacher assignment denial, risk-row scoping, the referral scope guard (allow + reject), counselor-only note access across all four roles, and intervention sensitive-field stripping for teacher/admin plus admin participant-list stripping.
+
+**Also seeded 3 demo counseling notes** ([seed-demo.ts](../scripts/seed-demo.ts) `createDemoCounselingNotes`, idempotent via a `[demo]` marker). The counseling-note assertions previously **skipped** for lack of data — a vacuous check on the most sensitive table in the system. They now run.
+
+**2. `dismissRecommendationAction` was implemented but unreachable — now wired.** Full server action with RBAC and `RECOMMENDATION_DISMISSED` audit, and no UI called it. Phase 4.3 records "dismissed drafts remain as audit evidence" as shipped; in practice a counselor could not dismiss anything and drafts accumulated forever. New [dismiss-recommendation-button.tsx](../components/counselor/dismiss-recommendation-button.tsx) (two-step confirm) on the Open Recommendations queue; the action now takes a plain object like its `setPatternStatusAction` sibling and calls `revalidatePath`.
+
+This one matters beyond tidiness: *declining* an algorithmic suggestion is precisely the reflective-literacy behaviour §13 claims the system teaches. Without it, the queue only supported saying yes.
+
+**3. Genuinely dead code — deleted (~300 lines).**
+
+| Removed | Why |
+|---|---|
+| `components/roles/teacher/section-risk-card.tsx` (109 lines) | Never imported; see the Phase 5.1 correction above |
+| `recordGradeAction` (~55 lines) | Superseded by `recordBulkGradesAction`, which is what the gradebook calls. Gradebook was never broken |
+| `getCaseloadWithRisk` (~50 lines) | Superseded by `getCaseloadWithRiskPaged` in 7.7; its comment claimed callers that no longer existed |
+| `getLatestRiskForEnrollment` | No callers |
+| `bandColor`, `isCurrentYear`, `geminiKeyConfigured` | No callers |
+| `PRINCIPAL_DESCRIPTION`, `PRINCIPAL_METRICS` | Leftovers from when the principal landing page used `RoleOverview`. The page is now deliberately bespoke (renders live risk distribution) — divergence kept, orphans dropped |
+
+**Left alone deliberately:**
+- `EnrollmentStatus.TRANSFERRED / DROPPED / GRADUATED` are never set — no admin UI exposes them, so every enrollment is `ACTIVE` forever. Legitimate domain states; note as a limitation rather than delete.
+- `AuditAction.PATTERN_MATCHED` / `RECOMMENDATION_DRAFTED` are never logged individually — the engine audits them in aggregate through `RISK_RECOMPUTED` metadata. Adequate; the enum values are aspirational.
+- `requireSession` is exported but only used internally by `requireRole`. Harmless, and [CLAUDE.md](../CLAUDE.md) convention 2 names both.
+
+**Verified:** `npx tsc --noEmit` clean · `npm run lint` clean · `npm run build` clean · RBAC suite 18/18 · engine + import suites still pass.
+
+---
 
 ### 8.1 SEL module *(Slice A — closes most of Figure 14)*
 

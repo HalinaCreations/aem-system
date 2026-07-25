@@ -5,6 +5,7 @@
 // Orchestrates: score → pattern detection → recommendation generation → persist.
 
 import { z } from "zod";
+import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/session";
 import { logAudit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
@@ -181,11 +182,10 @@ export async function computeRiskAction(formData: FormData): Promise<ComputeResu
 const DismissInput = z.object({ id: z.string().min(1) });
 
 export async function dismissRecommendationAction(
-  formData: FormData,
+  input: unknown,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await requireRole("COUNSELOR");
-  const raw = Object.fromEntries(formData);
-  const parse = DismissInput.safeParse(raw);
+  const parse = DismissInput.safeParse(input);
   if (!parse.success) return { ok: false, error: parse.error.issues[0].message };
 
   const draft = await prisma.recommendationDraft.findUnique({ where: { id: parse.data.id } });
@@ -201,8 +201,9 @@ export async function dismissRecommendationAction(
     userId: session.user.id,
     resourceType: "RecommendationDraft",
     resourceId: draft.id,
-    metadata: { action: "DISMISSED" },
+    metadata: { action: "DISMISSED", scope: draft.scope, suggestedType: draft.suggestedType },
   });
 
+  revalidatePath("/counselor/interventions");
   return { ok: true };
 }

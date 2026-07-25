@@ -45,10 +45,6 @@ const DEFAULT_MODEL = "gemini-flash-latest";
 
 let cachedClient: GoogleGenAI | null = null;
 
-export function geminiKeyConfigured(): boolean {
-  return Boolean(process.env.GEMINI_API_KEY);
-}
-
 function getClient(): GoogleGenAI | null {
   if (cachedClient) return cachedClient;
   const apiKey = process.env.GEMINI_API_KEY;

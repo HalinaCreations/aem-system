@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { generateRecommendationNarrative, fallbackMessage } from "@/lib/ai/narrative";
 import { paginate, parsePageParam, PAGE_SIZE } from "@/lib/pagination";
 import { PaginationBar } from "@/components/shell/pagination-bar";
+import DismissRecommendationButton from "@/components/counselor/dismiss-recommendation-button";
 import type { InterventionStatus, InterventionType, PatternScope } from "@prisma/client";
 
 const INTERVENTION_STATUSES: InterventionStatus[] = [
@@ -295,12 +296,15 @@ export default async function CounselorInterventionsPage({
                         </span>
                       )}
                     </div>
-                    <Link
-                      href={`/counselor/interventions/new?fromRecommendation=${r.id}`}
-                      className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700 hover:bg-slate-50 transition-colors"
-                    >
-                      Open in builder →
-                    </Link>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <DismissRecommendationButton recommendationId={r.id} />
+                      <Link
+                        href={`/counselor/interventions/new?fromRecommendation=${r.id}`}
+                        className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700 hover:bg-slate-50 transition-colors"
+                      >
+                        Open in builder →
+                      </Link>
+                    </div>
                   </div>
 
                   {/* Scope target */}

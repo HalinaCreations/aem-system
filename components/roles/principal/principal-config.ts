@@ -2,8 +2,6 @@ import type { NavSection, ThemeName } from "@/components/shell/role-shell";
 
 export const PRINCIPAL_BADGE = "Principal workspace";
 export const PRINCIPAL_TITLE = "Oversight and decision dashboard";
-export const PRINCIPAL_DESCRIPTION =
-  "Monitor school-wide patterns, validate high-impact decisions, and keep governance visible across the system.";
 export const PRINCIPAL_THEME: ThemeName = "rose";
 
 export const PRINCIPAL_NAV: NavSection[] = [
@@ -38,8 +36,3 @@ export const PRINCIPAL_NAV: NavSection[] = [
   },
 ];
 
-export const PRINCIPAL_METRICS = [
-  { label: "Oversight level", value: "School-wide" },
-  { label: "Approval scope", value: "Broad interventions" },
-  { label: "Governance focus", value: "Bias and overrides" },
-];
