@@ -955,18 +955,53 @@ This one matters beyond tidiness: *declining* an algorithmic suggestion is preci
 
 ---
 
-### 8.1 SEL module *(Slice A — closes most of Figure 14)*
+### 8.1 SEL module *(Slice A — ✅ complete 2026-07-25)*
 
 Figure 14's Behavioral & Socio-Emotional box lists *emotional well-being*, *stress level*, *peer relationships*, and *student self-assessment*. None have anywhere to live today: [student-profile-view.tsx](../components/shell/student-profile-view.tsx) renders a "Behavioral & SEL Records" heading with no SEL data behind it, and `SELAssessment` has been named in [schema.prisma](../prisma/schema.prisma) line 5 as a future model since Phase 1.
 
-- [ ] **8.1.1 Schema** — `SELAssessment` (enrollmentId, assessedById, assessedAt, dimension scores) + supporting enums. Migration `add_sel_assessment`. New audit actions `SEL_ASSESSMENT_CREATED`, `SEL_ASSESSMENT_READ`.
-- [ ] **8.1.2 Access model** — counselor-managed per spec §6.4. Query helper in [lib/student/queries.ts](../lib/student/queries.ts) mirroring `getCounselingNotes`: non-counselor callers short-circuit to `[]` with no DB roundtrip. Teachers get **limited fields only** (§6.4 is explicit); principal read-only.
-- [ ] **8.1.3 Server action + UI** — `app/actions/counselor/sel.ts` (`requireRole("COUNSELOR")`, Zod, audit) + assessment form and timeline in the existing profile section.
-- [ ] **8.1.4 Import + demo data** — sixth `<CsvStep>`; extend [seed-demo.ts](../scripts/seed-demo.ts) so fixture students carry SEL history.
+- [x] **8.1.1 Schema** — `SELAssessment` (enrollmentId, assessedById, assessedAt, dimension scores) + supporting enums. Migration `add_sel_assessment`. New audit actions `SEL_ASSESSMENT_CREATED`, `SEL_ASSESSMENT_READ`.
+- [x] **8.1.2 Access model** — counselor-managed per spec §6.4. Query helper in [lib/student/queries.ts](../lib/student/queries.ts) mirroring `getCounselingNotes`: non-counselor callers short-circuit to `[]` with no DB roundtrip. Teachers get **limited fields only** (§6.4 is explicit); principal read-only.
+- [x] **8.1.3 Server action + UI** — `app/actions/counselor/sel.ts` (`requireRole("COUNSELOR")`, Zod, audit) + assessment form and timeline in the existing profile section.
+- [x] **8.1.4 Import + demo data** — sixth `<CsvStep>`; extend [seed-demo.ts](../scripts/seed-demo.ts) so fixture students carry SEL history.
 
 **Constraint (binding):** SEL does **not** become a sixth risk weight. Spec §7 fixes five dimensions, and every `AlgorithmConfig` version already recorded assumes that shape. SEL feeds the profile view and, optionally later, pattern rules. Adding a weight is scope expansion — if it becomes desirable, it needs its own decision, not a side effect of this slice.
 
-**Cut-order note:** SEL is #3 in the spec §15 cut order. If Phase 8 runs short on time, this is the documented sacrifice — but it is also the single highest-coverage slice against the research themes.
+**Cut-order note:** SEL is #3 in the spec §15 cut order. It was *not* cut — it shipped, and it is the single highest-coverage slice against the research themes.
+
+#### Slice A — what shipped (2026-07-25)
+
+**Access decision (user call, 2026-07-25): counselor + principal only.** The spec pulls two ways — §6.4 says "teacher view restricted to limited fields", but the §5 Teacher feature list never mentions SEL and §14 mandates data minimization. Resolution:
+
+| Role | Sees |
+|---|---|
+| COUNSELOR | all four dimensions + narrative `notes` |
+| PRINCIPAL | all four dimensions, `notes` forced to `null` |
+| TEACHER | nothing — `[]`, no DB roundtrip |
+| ADMIN | nothing — `[]`, no DB roundtrip |
+
+The principal line is the same one already drawn around counseling note bodies (§5, §9): oversight of *levels* without access to clinical narrative. This is the most conservative reading and the easiest to loosen later if teacher coordination turns out to need it.
+
+**Enforcement is in the query, not the component.** `getSELAssessments` decides role access and nulls `notes`; `StudentProfileView` renders whatever it is handed and makes no access decision of its own. `scripts/verify-sel.ts` asserts this directly so it fails if the decision ever migrates upward.
+
+**One scale, constant direction.** All four dimensions use `SELLevel { THRIVING, STABLE, AT_RISK, CRITICAL }` read as *level of concern* — so for `stressLevel`, THRIVING means well-regulated, not "lots of stress". Documented on the enum, in the form hint, and in the import hints, because the intuitive reading of "stress: thriving" is backwards.
+
+**`selfAssessment` is optional by design.** It is the student's own rating, but there is no student portal (§16), so a counselor records it second-hand and it simply may not exist. Nullable in the schema, "Not given" in the UI, blank-allowed in the CSV.
+
+**The import raised a real governance problem.** The wizard is admin-only (§6.11), but admins have no SEL access and SEL is counselor-authored clinical data — attributing imported assessments to the importing admin would have broken the "only counselors author SEL" invariant the QA sweep checks. Solution: a required `assessedByEmail` column validated against active COUNSELOR users. Rows are attributed to that named counselor, never the importer; the audit metadata records who they were attributed *to*, keeping §14 accountability intact. The admin is knowingly writing data they cannot read back — the step hint says so plainly.
+
+`notes` is never echoed into the admin-facing preview table (it shows "provided" / "—"), and the create action audits dimension levels but deliberately **not** note content — the audit log is readable by admin and principal, so copying narrative there would route around the access rule the query enforces.
+
+**Bug found and fixed in Slice 0's work.** The wizard's step container was gated `step >= 2 && step <= 5`, so the Interventions step added in 8.0.2 rendered its stepper button but no form — the step was unreachable. The Slice 0 smoke test grepped for the step *label*, which comes from `STEP_LABELS` and was present regardless, so it passed against a broken feature. Gate widened to `step <= 7`. **Lesson: assert on a string only the step body can produce, never one the navigation also emits.**
+
+**Verified:**
+- [scripts/verify-sel.ts](../scripts/verify-sel.ts) — 15 assertions. Access matrix across all four roles (including "principal NEVER receives notes", counted), read auditing, the only-counselors-author invariant, 5 validator error paths (unenrolled LRN, non-counselor assessor, bad date, bad level, bad optional level), and clean-row handling for case-insensitive levels/emails, US dates, and blank optionals. All pass.
+- Live UI smoke on a seeded student: counselor profile renders the narrative, principal profile returns **0 occurrences** of the same string, both render the SEL section. Teacher surfaces show no SEL anywhere.
+- Demo data: 5 assessments including a two-point improving trajectory on one student and one with no self-rating.
+- `npx tsc --noEmit` clean · `npm run lint` clean · `npm run build` clean · RBAC / engine / import suites still pass.
+
+**Human-verification carry-forward:** clicking through wizard steps 6 and 7 needs a browser — the wizard renders step 1 server-side and later steps are client state, so curl cannot reach them. Both step bodies are confirmed present in the compiled client bundle.
+
+**Not done in this slice (deliberate):** SEL does not feed the risk engine. Spec §7 fixes five weighted dimensions and every recorded `AlgorithmConfig` version assumes that shape — adding a sixth needs its own decision, not a side effect of this slice.
 
 ### 8.2 Intervention types + notifications *(Slice B — cheapest coverage per line)*
 

@@ -27,6 +27,7 @@ import {
   type InterventionType,
   type ParticipationOutcome,
   type PatternScope,
+  type SELLevel,
 } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
@@ -850,6 +851,98 @@ async function createDemoCounselingNotes(
   console.log(`  counseling notes: ${created} created`);
 }
 
+// SEL assessments across the active year, including one student with a
+// two-point trajectory (AT_RISK → improving) so the profile timeline shows
+// change over time rather than a single snapshot. Idempotent: keyed on there
+// being any SELAssessment rows at all for the active year's enrollments.
+async function createDemoSELAssessments(
+  yearMap: Map<string, { id: string }>,
+  enrollments: DemoEnrollment[],
+) {
+  const counselor = await prisma.user.findUnique({ where: { email: "counselor@school.edu" } });
+  if (!counselor) {
+    console.warn("  counselor@school.edu not found; skipping SEL assessments");
+    return;
+  }
+
+  const activeYearId = yearMap.get("SY 2025-2026")!.id;
+  const existing = await prisma.sELAssessment.count({
+    where: { enrollment: { schoolYearId: activeYearId } },
+  });
+  if (existing > 0) {
+    console.log(`  SEL assessments: 0 created, ${existing} skipped (already present)`);
+    return;
+  }
+
+  const targets = enrollments.filter((e) => e.schoolYearId === activeYearId).slice(0, 6);
+  if (targets.length === 0) return;
+
+  type Row = {
+    enrollmentId: string;
+    assessedAt: Date;
+    emotionalWellbeing: SELLevel;
+    stressLevel: SELLevel;
+    peerRelationships: SELLevel;
+    selfAssessment: SELLevel | null;
+    notes: string | null;
+  };
+
+  const rows: Row[] = [
+    // Trajectory case — same student, two terms apart, improving.
+    {
+      enrollmentId: targets[0].id,
+      assessedAt: new Date("2025-09-15T00:00:00.000Z"),
+      emotionalWellbeing: "AT_RISK",
+      stressLevel: "CRITICAL",
+      peerRelationships: "AT_RISK",
+      selfAssessment: "AT_RISK",
+      notes: "Reports persistent worry about family circumstances and trouble sleeping. Weekly check-in agreed.",
+    },
+    {
+      enrollmentId: targets[0].id,
+      assessedAt: new Date("2025-11-24T00:00:00.000Z"),
+      emotionalWellbeing: "STABLE",
+      stressLevel: "AT_RISK",
+      peerRelationships: "STABLE",
+      selfAssessment: "STABLE",
+      notes: "Sleep improved; still tense before assessments. Continuing check-ins at a lower cadence.",
+    },
+    {
+      enrollmentId: targets[1].id,
+      assessedAt: new Date("2025-10-02T00:00:00.000Z"),
+      emotionalWellbeing: "THRIVING",
+      stressLevel: "STABLE",
+      peerRelationships: "THRIVING",
+      selfAssessment: "THRIVING",
+      notes: null,
+    },
+    {
+      enrollmentId: targets[2].id,
+      assessedAt: new Date("2025-10-09T00:00:00.000Z"),
+      emotionalWellbeing: "AT_RISK",
+      stressLevel: "AT_RISK",
+      peerRelationships: "CRITICAL",
+      // No self-rating given — exercises the optional path.
+      selfAssessment: null,
+      notes: "Peer group shifted after section change; reluctant to join group work.",
+    },
+    {
+      enrollmentId: targets[3].id,
+      assessedAt: new Date("2025-10-16T00:00:00.000Z"),
+      emotionalWellbeing: "STABLE",
+      stressLevel: "STABLE",
+      peerRelationships: "STABLE",
+      selfAssessment: "STABLE",
+      notes: null,
+    },
+  ];
+
+  for (const r of rows) {
+    await prisma.sELAssessment.create({ data: { ...r, assessedById: counselor.id } });
+  }
+  console.log(`  SEL assessments: ${rows.length} created`);
+}
+
 async function createDemoInterventions(
   yearMap: Map<string, { id: string }>,
   enrollments: DemoEnrollment[],
@@ -1308,6 +1401,9 @@ async function main() {
 
   console.log("→ Demo counseling notes");
   await createDemoCounselingNotes(yearMap, enrollments);
+
+  console.log("→ Demo SEL assessments");
+  await createDemoSELAssessments(yearMap, enrollments);
 
   console.log("→ Risk engine per year");
   await runEngineForAllYears(yearMap);

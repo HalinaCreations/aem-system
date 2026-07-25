@@ -143,6 +143,8 @@ enum AuditAction {
   RISK_OVERRIDE
   COUNSELING_NOTE_CREATED
   COUNSELING_NOTE_READ
+  SEL_ASSESSMENT_CREATED
+  SEL_ASSESSMENT_READ
   AI_NARRATIVE_GENERATED
   INTERVENTION_CREATED
   INTERVENTION_ACTIVATED
@@ -200,6 +202,17 @@ enum InterventionNoteStatus {
   DISMISSED
 }
 
+/// Concern scale shared by every SEL dimension. Direction is constant:
+/// THRIVING is always the healthy end, CRITICAL always the most concerning.
+/// For `stressLevel` that means THRIVING = well-regulated, CRITICAL = severe
+/// stress — read it as "level of concern", not "amount of the thing".
+enum SELLevel {
+  THRIVING
+  STABLE
+  AT_RISK
+  CRITICAL
+}
+
 enum ParticipationOutcome {
   IMPROVING
   STABLE
@@ -225,6 +238,7 @@ model User {
   recordedAttendance    Attendance[]
   recordedBehavioral    BehavioralRecord[]
   counselingNotes       CounselingNote[]
+  selAssessments        SELAssessment[]
   interventionsOwned    Intervention[]
   interventionNotes     InterventionNote[]
   interventionRevisions InterventionRevision[]
@@ -358,6 +372,7 @@ model StudentEnrollment {
   riskAssessments            RiskAssessment[]
   riskOverrides              RiskOverride[]
   counselingNotes            CounselingNote[]
+  selAssessments             SELAssessment[]
   interventionParticipations InterventionParticipation[]
 
   @@unique([studentId, schoolYearId])
@@ -600,6 +615,33 @@ model InterventionReferral {
 
 // Free-form counseling notes attached to a student's enrollment.
 // Body is counselor-only; query layer must strip for other roles.
+/// Periodic Social-Emotional Learning assessment (spec §6.4). Counselor-managed
+/// and counselor-authored; teachers and admin have no access at any layer, and
+/// the principal sees dimension levels but never `notes` — the same treatment
+/// counseling note bodies get.
+///
+/// `selfAssessment` is the student's own rating as reported to the counselor.
+/// There is no student portal (spec §16), so it is recorded second-hand and is
+/// optional for that reason.
+model SELAssessment {
+  id                 String            @id @default(cuid())
+  enrollmentId       String
+  enrollment         StudentEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  assessedById       String
+  assessedBy         User              @relation(fields: [assessedById], references: [id], onDelete: Restrict)
+  assessedAt         DateTime          @default(now())
+  emotionalWellbeing SELLevel
+  stressLevel        SELLevel
+  peerRelationships  SELLevel
+  selfAssessment     SELLevel?
+  notes              String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@index([enrollmentId, assessedAt])
+  @@index([assessedById])
+}
+
 model CounselingNote {
   id           String            @id @default(cuid())
   enrollmentId String
