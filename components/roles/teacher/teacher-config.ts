@@ -31,6 +31,12 @@ export const TEACHER_NAV: NavSection[] = [
     description:
       "Propose an intervention for a student in your sections; a counselor reviews and decides.",
   },
+  {
+    title: "How this system works",
+    href: "/learn",
+    description:
+      "Plain-language explanation of how the risk score is computed, what each pattern rule looks for, and what the system decides versus what you decide.",
+  },
 ];
 
 export const TEACHER_METRICS = [

@@ -43,6 +43,12 @@ export const ADMIN_NAV: NavSection[] = [
     description:
       "Inspect the append-only audit trail of authentication events, data writes, and sensitive reads.",
   },
+  {
+    title: "How this system works",
+    href: "/learn",
+    description:
+      "Plain-language explanation of how the risk score is computed, what each pattern rule looks for, and what the system decides versus what you decide.",
+  },
 ];
 
 export const ADMIN_METRICS = [

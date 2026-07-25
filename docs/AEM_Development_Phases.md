@@ -1038,11 +1038,35 @@ The principal line is the same one already drawn around counseling note bodies (
 - Route × role smoke: all four `/{role}/notifications` return 200 for their own role, teacher → `/counselor/notifications` returns 307. Bell renders in the shared shell.
 - `npx tsc --noEmit` clean · `npm run lint` clean · `npm run build` clean (41 routes) · RBAC / SEL / engine / import suites all still pass.
 
-### 8.3 AI literacy surfaces *(Slice C — closes Figure 22's in-app half)*
+### 8.3 AI literacy surfaces *(Slice C — ✅ complete 2026-07-25)*
 
-- [ ] **8.3.1 "How does this work?" pages.** Spec §6.9, deferred since Phase 4. Server components under `/learn`: how the risk score is computed, what each pattern rule looks for, what the system does and does not decide. **Render the weights from the live `AlgorithmConfig` row, not hardcoded prose** — otherwise the page silently drifts every time an admin retunes the algorithm. Link from every explainability panel and risk badge.
-- [ ] **8.3.2 Tooltips on algorithmic outputs.** §6.9's last bullet. One shared `<Explain>` primitive applied to risk bands, sub-score bars, pattern evidence, and disparity flags.
-- [ ] **8.3.3 AI Literacy Assistant — remains cut.** #1 in the spec §15 cut order; needs a Gemini chat-session API plus multi-turn UI. Recorded here as a deliberate boundary so it stops reading as unfinished work.
+- [x] **8.3.1 "How does this work?" pages.** Spec §6.9, deferred since Phase 4. Server components under `/learn`: how the risk score is computed, what each pattern rule looks for, what the system does and does not decide. **Render the weights from the live `AlgorithmConfig` row, not hardcoded prose** — otherwise the page silently drifts every time an admin retunes the algorithm. Link from every explainability panel and risk badge.
+- [x] **8.3.2 Tooltips on algorithmic outputs.** §6.9's last bullet. One shared `<Explain>` primitive applied to risk bands, sub-score bars, pattern evidence, and disparity flags.
+- [x] **8.3.3 AI Literacy Assistant — remains cut.** #1 in the spec §15 cut order; needs a Gemini chat-session API plus multi-turn UI. Recorded here as a deliberate boundary so it stops reading as unfinished work.
+
+#### Slice C — what shipped (2026-07-25)
+
+**`/learn` is deliberately outside the role prefixes.** Four pages — hub, risk score, pattern rules, and what the system decides — reachable by all four roles at the same URLs. `proxy.ts` already requires a session for anything not public, and `ROLE_PREFIXES` doesn't cover `/learn`, so this needed no proxy change. The reason to share one surface rather than build `/{role}/learn` four times: "the counselor was shown a different version of the rules" would defeat the purpose. Linked from every role's nav, the explainability panel ("How does this work?"), and the pattern inbox.
+
+**The risk-score page cannot drift, and that was tested by breaking it.** Weights and band cut-offs are read from the active `AlgorithmConfig` at render time; only the *prose* describing each dimension is static. Verified by retuning the live config mid-test:
+
+| | academic | attendance | behavioral | intervention history | profile | LOW band |
+|---|---|---|---|---|---|---|
+| before | 40% | 30% | 20% | 5% | 5% | Below 40 |
+| after retune | 10% | 10% | 10% | 60% | 10% | Below 25 |
+| restored | 40% | 30% | 20% | 5% | 5% | Below 40 |
+
+The page followed the config in both directions. Config was restored to `v1` defaults afterwards. Shares are rendered as *normalised* percentages rather than raw weights, because the engine normalises — printing the raw numbers would misstate the maths whenever they don't sum to 1.
+
+**Known drift risk, recorded rather than hidden:** the pattern-rule thresholds on `/learn/patterns` are prose transcribed from [lib/patterns/rules.ts](../lib/patterns/rules.ts), because unlike the weights those numbers are compiled into the rule functions rather than stored in config. Changing a rule threshold means updating that page by hand. Noted at the top of the file. Moving rule thresholds into `AlgorithmConfig` would fix it properly and is worth doing if the rules ever become tunable.
+
+**`<Explain>` is CSS-only.** A JS-free hover/focus popover, so the five sub-score bars in a server-rendered panel don't become five hydrated client islands on a page that already renders dozens of them. Keyboard-reachable via `tabIndex` + `focus-within` rather than hover-only.
+
+**Tone was a deliberate choice.** These pages are the thesis's AI-literacy artefact, so they say plainly what the score *is not*: not a prediction, not a decision, not better than the data underneath it, and overridable. `/learn/decisions` puts "the system does" and "people do" side by side, and states that the language model writes prose and nothing else — if it is unavailable, every number stays exactly where it was, which is the test of whether it was ever doing the real work.
+
+**Scope note:** 8.3.2 as planned said tooltips on "risk bands, sub-score bars, pattern evidence, and disparity flags". Shipped on the sub-score bars plus the panel-level "How does this work?" link and the pattern-inbox link. Evidence and disparity-flag tooltips were not added — the evidence payloads are already rendered in full prose beside the match, and the disparity flag already carries an inline explanation, so a tooltip would restate what is on screen. Recorded as a narrowing rather than left implied.
+
+**Verified:** all four `/learn` routes return 200 for all four roles; unauthenticated returns 307. `npx tsc --noEmit` clean · `npm run lint` clean · `npm run build` clean (45 routes).
 
 ### 8.4 Declared non-goals
 
@@ -1055,17 +1079,35 @@ Recorded so the research write-up can defend these as design positions rather th
 
 ### Phase 8 Definition of Done
 
-- [ ] Risk scores include a non-zero `interventionHistory` contribution for students with intervention history, visible in the explainability panel
-- [ ] All six spec §6.11 import steps present in the wizard
-- [ ] Counselor records an SEL assessment; teacher sees limited fields; principal read-only; `SEL_ASSESSMENT_READ` audited
-- [ ] Teacher receives an in-app notification when one of their students crosses into a higher band
-- [ ] `/learn` pages render current algorithm weights from the active `AlgorithmConfig`
-- [ ] Demo fixtures still fire every pattern rule after the scoring change
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build` clean; route × role smoke matrix passes
+- [x] Risk scores include a non-zero `interventionHistory` contribution for students with intervention history, visible in the explainability panel
+- [x] All six spec §6.11 import steps present in the wizard
+- [x] Counselor records an SEL assessment; principal sees levels but never notes; teacher and admin get nothing; `SEL_ASSESSMENT_READ` audited *(amended from "teacher sees limited fields" — the access question was put to the user during 8.1 and resolved to counselor + principal only; see the Slice A notes)*
+- [x] Teacher receives an in-app notification when one of their students crosses into a higher band
+- [x] `/learn` pages render current algorithm weights from the active `AlgorithmConfig`
+- [x] Demo fixtures still fire every pattern rule after the scoring change
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build` clean; route × role smoke matrix passes
 
 **Estimated size:** ~2,000–2,400 net new LOC across ~5 migrations and ~4–6 working sessions (≈10–12% growth on the current ~20,400 LOC in `app/` + `lib/` + `components/`). Benchmark: the 7.10 referral slice was ~280 LOC for its counselor half alone.
 
-**Phase 8 retrospective:** _(fill in when done)_
+### Phase 8 retrospective
+
+- **The audit was worth more than any single feature.** Slice 0.4 started as "delete some dead code" and surfaced two things that mattered more: `lib/rbac.ts` looked like the query-layer RBAC and enforced nothing, and `dismissRecommendationAction` was fully built but unreachable. Neither was a *bug* — the RBAC works, just elsewhere — but both meant a reader would have believed something false about the system. **Dead code that looks load-bearing is worse than dead code that looks dead.**
+- **A green test can be worse than no test.** `verify-rbac-scope.ts` passed for months while exercising a module production never called, and it printed rather than asserted. Its counseling-note check also *skipped* silently for want of demo data — a vacuous check on the most sensitive table in the system. Rewritten to 18 real assertions, plus seeded notes so the skip cannot recur. Worth re-reading any suite that has never failed.
+- **Verify on a string only the feature can produce.** The Slice 0 smoke test for the new import step grepped for the step *label*, which the stepper emits whether or not the step body renders. It passed against a step that was unreachable because of a `step <= 5` gate. Caught in Slice A, one slice later.
+- **Making something testable beat testing around it.** The notification fan-out began as straight-line code inside a server action, unreachable without a session. Extracting `buildBandIncreaseNotifications` turned six important cases (improvement, unchanged band, first-ever score, orphan section) into assertions. Same pattern would help elsewhere.
+- **Prove a "cannot drift" claim by breaking it.** The `/learn` page claims to track live config; that was verified by retuning the weights mid-test and watching every number move, then restoring. A claim of this shape is otherwise indistinguishable from a well-written lie.
+- **Type the new field as required, not optional-with-default.** Adding `interventionHistory` to `ScoringInput` as required is what made `tsc` find the fifth caller (`scripts/run-risk-engine.ts`). Grep would have missed it.
+- **Three claims in this tracker were wrong before Phase 8 corrected them:** Phase 5.1 credited a component never imported; 8.2.1 overstated what §10 required of the recommendation mapping; the Phase 8 DoD described an SEL access model that the user's decision superseded. All three were written in good faith and all three would have misled someone. Retrospectives are worth as much as plans.
+- **Two governance questions had no technical answer.** SEL visibility (§6.4 vs §5) went to the user rather than being defaulted. Attributing imported SEL to a counselor rather than the importing admin came out of the same principle. When a decision is about who may see a child's data, "pick a sensible default and move on" is the wrong instinct.
+- **Restraint counted twice.** The recommendation mappings were left alone rather than inventing clinical routing to satisfy a checkbox, and SEL was deliberately kept out of the risk engine because §7 fixes five weighted dimensions and every recorded `AlgorithmConfig` version assumes that shape.
+
+**Where Phase 8 leaves the system:** every figure from the research coverage review is now either implemented, explicitly out of scope with a stated reason (§8.4), or blocked on rules that need multiple years of data. The five risk dimensions all contribute. All six import steps exist. The literacy surface is real and self-updating.
+
+**Open follow-ups:**
+- Pattern-rule thresholds on `/learn/patterns` are hand-transcribed prose; moving them into `AlgorithmConfig` would remove the last drift risk in that surface.
+- The `interventionHistory` weight is `0.05`, so the newly-wired dimension moves a total score by at most ~4 points. Correct and live, but whether 0.05 is the right weight is a policy question for the principal/admin before any demo.
+- Grade- and school-level pattern rules remain deferred (they need ≥2 full years).
+- AI Literacy Assistant remains cut (spec §15 cut order #1).
 
 ---
 

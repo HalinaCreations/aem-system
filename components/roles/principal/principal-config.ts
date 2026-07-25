@@ -34,5 +34,11 @@ export const PRINCIPAL_NAV: NavSection[] = [
     description:
       "Inspect audit history, outcome trends, and risk overrides with mandatory written accountability.",
   },
+  {
+    title: "How this system works",
+    href: "/learn",
+    description:
+      "Plain-language explanation of how the risk score is computed, what each pattern rule looks for, and what the system decides versus what you decide.",
+  },
 ];
 

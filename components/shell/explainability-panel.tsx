@@ -2,7 +2,17 @@
 // Shows the score, band, and factor breakdown in human-readable form.
 // Pure UI — accepts pre-fetched data; no I/O.
 
+import Link from "next/link";
+import Explain from "@/components/shell/explain";
 import type { RiskFactors, RiskBandLabel, InterventionHistoryBreakdown } from "@/lib/risk/types";
+
+const FACTOR_HELP: Record<string, string> = {
+  academic: "Overall average, how many subjects are below the passing line, and whether grades are rising or falling across quarters.",
+  attendance: "Absence rate, tardiness, and the longest unbroken run of absences. A run counts for more than the same number of scattered days.",
+  behavioral: "Logged incidents, weighted by severity — one serious incident is not the same as three minor ones.",
+  interventionHistory: "Whether past support worked. Repeat plans and unfavourable outcomes raise it; an improving outcome lowers it. Being on a plan right now adds nothing.",
+  profile: "A small adjustment for SPED status and learning modality. The smallest dimension by design.",
+};
 
 interface ExplainabilityPanelProps {
   score: number;
@@ -62,6 +72,12 @@ export default function ExplainabilityPanel({ score, band, factors, compact = fa
           <p className={`font-semibold ${style.text}`}>{style.label}</p>
           <p className="text-xs text-slate-500">Score: {score.toFixed(1)} / 100</p>
         </div>
+        <Link
+          href="/learn/risk-score"
+          className="ml-auto shrink-0 text-[11px] font-medium text-slate-500 underline underline-offset-2 transition-colors hover:text-slate-900"
+        >
+          How does this work?
+        </Link>
       </div>
 
       {/* Factor bars */}
@@ -71,7 +87,10 @@ export default function ExplainabilityPanel({ score, band, factors, compact = fa
           return (
             <div key={key}>
               <div className="flex justify-between text-xs text-slate-600 mb-0.5">
-                <span>{FACTOR_LABELS[key]}</span>
+                <span className="inline-flex items-center gap-1">
+                  {FACTOR_LABELS[key]}
+                  <Explain label={`How ${FACTOR_LABELS[key]} is measured`}>{FACTOR_HELP[key]}</Explain>
+                </span>
                 <span className="font-mono">{sub}</span>
               </div>
               <ScoreBar value={sub} />

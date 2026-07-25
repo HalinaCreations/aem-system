@@ -43,6 +43,12 @@ export const COUNSELOR_NAV: NavSection[] = [
     description:
       "Process observation notes and revision requests submitted by teachers. Acknowledge, incorporate, or discuss each item.",
   },
+  {
+    title: "How this system works",
+    href: "/learn",
+    description:
+      "Plain-language explanation of how the risk score is computed, what each pattern rule looks for, and what the system decides versus what you decide.",
+  },
 ];
 
 export const COUNSELOR_METRICS = [
