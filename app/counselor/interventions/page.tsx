@@ -12,6 +12,8 @@ import { prisma } from "@/lib/prisma";
 import { generateRecommendationNarrative, fallbackMessage } from "@/lib/ai/narrative";
 import { paginate, parsePageParam, PAGE_SIZE } from "@/lib/pagination";
 import { PaginationBar } from "@/components/shell/pagination-bar";
+import DismissRecommendationButton from "@/components/counselor/dismiss-recommendation-button";
+import { INTERVENTION_TYPES, INTERVENTION_TYPE_LABEL, interventionTypeLabel } from "@/lib/intervention/types";
 import type { InterventionStatus, InterventionType, PatternScope } from "@prisma/client";
 
 const INTERVENTION_STATUSES: InterventionStatus[] = [
@@ -20,17 +22,6 @@ const INTERVENTION_STATUSES: InterventionStatus[] = [
   "ACTIVE",
   "COMPLETED",
   "CANCELLED",
-];
-
-const INTERVENTION_TYPES: InterventionType[] = [
-  "ACADEMIC_SUPPORT",
-  "COUNSELING_SESSION",
-  "IMMEDIATE_COUNSELING",
-  "POSITIVE_REINFORCEMENT",
-  "CASE_REVIEW",
-  "SECTION_INTERVENTION",
-  "SUBJECT_REMEDIATION",
-  "ATTENDANCE_PROGRAM",
 ];
 
 const SCOPE_VALUES: PatternScope[] = ["STUDENT", "SECTION", "GRADE", "SCHOOL"];
@@ -287,7 +278,7 @@ export default async function CounselorInterventionsPage({
                         {SCOPE_LABEL[r.scope] ?? r.scope}
                       </span>
                       <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
-                        {r.suggestedType.replace(/_/g, " ")}
+                        {interventionTypeLabel(r.suggestedType)}
                       </span>
                       {r.triggeringRuleId && (
                         <span className="rounded-full border border-slate-200 px-2.5 py-0.5 text-[10px] font-medium text-slate-400">
@@ -295,12 +286,15 @@ export default async function CounselorInterventionsPage({
                         </span>
                       )}
                     </div>
-                    <Link
-                      href={`/counselor/interventions/new?fromRecommendation=${r.id}`}
-                      className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700 hover:bg-slate-50 transition-colors"
-                    >
-                      Open in builder →
-                    </Link>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <DismissRecommendationButton recommendationId={r.id} />
+                      <Link
+                        href={`/counselor/interventions/new?fromRecommendation=${r.id}`}
+                        className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700 hover:bg-slate-50 transition-colors"
+                      >
+                        Open in builder →
+                      </Link>
+                    </div>
                   </div>
 
                   {/* Scope target */}
@@ -358,7 +352,7 @@ export default async function CounselorInterventionsPage({
                         {o.scopeLabel}
                       </Link>
                       <p className="mt-0.5 text-xs text-slate-500">
-                        {SCOPE_LABEL[o.scope] ?? o.scope} · {o.type.replace(/_/g, " ")}
+                        {SCOPE_LABEL[o.scope] ?? o.scope} · {interventionTypeLabel(o.type)}
                         {o.endDate ? ` · ended ${o.endDate}` : ""}
                       </p>
                     </div>
@@ -485,7 +479,7 @@ export default async function CounselorInterventionsPage({
                 <option value="">All types</option>
                 {INTERVENTION_TYPES.map((t) => (
                   <option key={t} value={t}>
-                    {t.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase())}
+                    {INTERVENTION_TYPE_LABEL[t]}
                   </option>
                 ))}
               </select>
@@ -541,7 +535,7 @@ export default async function CounselorInterventionsPage({
                         </Link>
                       </td>
                       <td className="px-4 py-3.5 text-slate-500 text-xs">{SCOPE_LABEL[i.scope] ?? i.scope}</td>
-                      <td className="px-4 py-3.5 text-slate-600 text-xs capitalize">{i.type.replace(/_/g, " ").toLowerCase()}</td>
+                      <td className="px-4 py-3.5 text-slate-600 text-xs">{interventionTypeLabel(i.type)}</td>
                       <td className="px-4 py-3.5">
                         <span
                           className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] ${

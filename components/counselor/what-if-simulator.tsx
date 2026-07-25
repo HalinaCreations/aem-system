@@ -16,6 +16,9 @@ const DEFAULTS: WhatIfInput = {
   behavioralHigh: 0,
   behavioralModerate: 1,
   behavioralLow: 2,
+  priorImproving: 0,
+  priorDeclining: 0,
+  priorNeutral: 0,
   spedStatus: "NONE",
   learningModality: "FACE_TO_FACE",
 };
@@ -92,6 +95,19 @@ export default function WhatIfSimulator() {
             <Num label="HIGH" value={inputs.behavioralHigh} min={0} max={20} onChange={(v) => setNum("behavioralHigh", v)} />
             <Num label="MODERATE" value={inputs.behavioralModerate} min={0} max={20} onChange={(v) => setNum("behavioralModerate", v)} />
             <Num label="LOW" value={inputs.behavioralLow} min={0} max={20} onChange={(v) => setNum("behavioralLow", v)} />
+          </div>
+        </Group>
+
+        <Group title="Intervention history">
+          <p className="text-[11px] leading-snug text-slate-500">
+            Completed interventions, by recorded outcome. Repeat need and declining outcomes raise
+            risk; an improving outcome is protective. Being under an <em>active</em> plan does not
+            raise the score.
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            <Num label="Improving" value={inputs.priorImproving} min={0} max={20} onChange={(v) => setNum("priorImproving", v)} />
+            <Num label="Declining" value={inputs.priorDeclining} min={0} max={20} onChange={(v) => setNum("priorDeclining", v)} />
+            <Num label="Stable" value={inputs.priorNeutral} min={0} max={20} onChange={(v) => setNum("priorNeutral", v)} />
           </div>
         </Group>
 

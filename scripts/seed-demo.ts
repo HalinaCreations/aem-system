@@ -27,10 +27,12 @@ import {
   type InterventionType,
   type ParticipationOutcome,
   type PatternScope,
+  type SELLevel,
 } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 import { computeRiskScore } from "../lib/risk/engine";
+import { fetchInterventionHistory, EMPTY_INTERVENTION_HISTORY } from "../lib/risk/intervention-history";
 import { detectStudentPatterns, detectSectionPatterns } from "../lib/patterns/detector";
 import { generateRecommendation } from "../lib/patterns/recommendations";
 import type { PatternRuleConfig, PatternRuleId } from "../lib/patterns/rules";
@@ -804,6 +806,143 @@ async function bulkInsert<T>(
 
 // ─── Phase 8: closed interventions across all 4 scopes ──────────────────────
 
+// A few counselor-authored notes on active-year students. These exist so the
+// counselor-only read path is exercised by real data — `verify-rbac-scope.ts`
+// asserts that every non-counselor role gets zero rows back, and that check is
+// vacuous if no note exists. Idempotent via the marker prefix.
+const NOTE_MARKER = "[demo]";
+
+async function createDemoCounselingNotes(
+  yearMap: Map<string, { id: string }>,
+  enrollments: DemoEnrollment[],
+) {
+  const counselor = await prisma.user.findUnique({ where: { email: "counselor@school.edu" } });
+  if (!counselor) {
+    console.warn("  counselor@school.edu not found; skipping counseling notes");
+    return;
+  }
+
+  const existing = await prisma.counselingNote.count({ where: { body: { startsWith: NOTE_MARKER } } });
+  if (existing > 0) {
+    console.log(`  counseling notes: 0 created, ${existing} skipped (already present)`);
+    return;
+  }
+
+  const activeYearId = yearMap.get("SY 2025-2026")!.id;
+  const targets = enrollments.filter((e) => e.schoolYearId === activeYearId).slice(0, 3);
+
+  const bodies = [
+    "Intake conversation. Student reports difficulty concentrating during afternoon classes and worry about a family member's health. Agreed to a weekly check-in.",
+    "Follow-up. Attendance has stabilised since the check-ins began. Student asked about study-skills support ahead of Q3 exams.",
+    "Adviser flagged withdrawal from group work. Student says the peer group changed sections; discussed options for re-engaging.",
+  ];
+
+  let created = 0;
+  for (let i = 0; i < targets.length; i++) {
+    await prisma.counselingNote.create({
+      data: {
+        enrollmentId: targets[i].id,
+        authorId: counselor.id,
+        body: `${NOTE_MARKER} ${bodies[i]}`,
+      },
+    });
+    created++;
+  }
+  console.log(`  counseling notes: ${created} created`);
+}
+
+// SEL assessments across the active year, including one student with a
+// two-point trajectory (AT_RISK → improving) so the profile timeline shows
+// change over time rather than a single snapshot. Idempotent: keyed on there
+// being any SELAssessment rows at all for the active year's enrollments.
+async function createDemoSELAssessments(
+  yearMap: Map<string, { id: string }>,
+  enrollments: DemoEnrollment[],
+) {
+  const counselor = await prisma.user.findUnique({ where: { email: "counselor@school.edu" } });
+  if (!counselor) {
+    console.warn("  counselor@school.edu not found; skipping SEL assessments");
+    return;
+  }
+
+  const activeYearId = yearMap.get("SY 2025-2026")!.id;
+  const existing = await prisma.sELAssessment.count({
+    where: { enrollment: { schoolYearId: activeYearId } },
+  });
+  if (existing > 0) {
+    console.log(`  SEL assessments: 0 created, ${existing} skipped (already present)`);
+    return;
+  }
+
+  const targets = enrollments.filter((e) => e.schoolYearId === activeYearId).slice(0, 6);
+  if (targets.length === 0) return;
+
+  type Row = {
+    enrollmentId: string;
+    assessedAt: Date;
+    emotionalWellbeing: SELLevel;
+    stressLevel: SELLevel;
+    peerRelationships: SELLevel;
+    selfAssessment: SELLevel | null;
+    notes: string | null;
+  };
+
+  const rows: Row[] = [
+    // Trajectory case — same student, two terms apart, improving.
+    {
+      enrollmentId: targets[0].id,
+      assessedAt: new Date("2025-09-15T00:00:00.000Z"),
+      emotionalWellbeing: "AT_RISK",
+      stressLevel: "CRITICAL",
+      peerRelationships: "AT_RISK",
+      selfAssessment: "AT_RISK",
+      notes: "Reports persistent worry about family circumstances and trouble sleeping. Weekly check-in agreed.",
+    },
+    {
+      enrollmentId: targets[0].id,
+      assessedAt: new Date("2025-11-24T00:00:00.000Z"),
+      emotionalWellbeing: "STABLE",
+      stressLevel: "AT_RISK",
+      peerRelationships: "STABLE",
+      selfAssessment: "STABLE",
+      notes: "Sleep improved; still tense before assessments. Continuing check-ins at a lower cadence.",
+    },
+    {
+      enrollmentId: targets[1].id,
+      assessedAt: new Date("2025-10-02T00:00:00.000Z"),
+      emotionalWellbeing: "THRIVING",
+      stressLevel: "STABLE",
+      peerRelationships: "THRIVING",
+      selfAssessment: "THRIVING",
+      notes: null,
+    },
+    {
+      enrollmentId: targets[2].id,
+      assessedAt: new Date("2025-10-09T00:00:00.000Z"),
+      emotionalWellbeing: "AT_RISK",
+      stressLevel: "AT_RISK",
+      peerRelationships: "CRITICAL",
+      // No self-rating given — exercises the optional path.
+      selfAssessment: null,
+      notes: "Peer group shifted after section change; reluctant to join group work.",
+    },
+    {
+      enrollmentId: targets[3].id,
+      assessedAt: new Date("2025-10-16T00:00:00.000Z"),
+      emotionalWellbeing: "STABLE",
+      stressLevel: "STABLE",
+      peerRelationships: "STABLE",
+      selfAssessment: "STABLE",
+      notes: null,
+    },
+  ];
+
+  for (const r of rows) {
+    await prisma.sELAssessment.create({ data: { ...r, assessedById: counselor.id } });
+  }
+  console.log(`  SEL assessments: ${rows.length} created`);
+}
+
 async function createDemoInterventions(
   yearMap: Map<string, { id: string }>,
   enrollments: DemoEnrollment[],
@@ -1145,12 +1284,18 @@ async function runEngineForAllYears(yearMap: Map<string, { id: string }>) {
       },
     });
 
+    const historyByStudent = await fetchInterventionHistory(
+      enrollments.map((e) => e.studentId),
+      syId,
+    );
+
     const assessmentRows: Prisma.RiskAssessmentCreateManyInput[] = [];
     for (const e of enrollments) {
       const result = computeRiskScore({
         grades: e.grades,
         attendance: e.attendance,
         behavioral: e.behavioralRecords,
+        interventionHistory: historyByStudent.get(e.studentId) ?? EMPTY_INTERVENTION_HISTORY,
         spedStatus: e.student.spedStatus,
         learningModality: e.learningModality,
         weights,
@@ -1253,6 +1398,12 @@ async function main() {
 
   console.log("→ Demo interventions");
   await createDemoInterventions(yearMap, enrollments);
+
+  console.log("→ Demo counseling notes");
+  await createDemoCounselingNotes(yearMap, enrollments);
+
+  console.log("→ Demo SEL assessments");
+  await createDemoSELAssessments(yearMap, enrollments);
 
   console.log("→ Risk engine per year");
   await runEngineForAllYears(yearMap);

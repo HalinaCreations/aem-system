@@ -583,7 +583,7 @@ Ready for Phase 3 (Intervention Module) or Phase 4 (Algorithmic Engine), dependi
 **Goal:** Insights are visible at every level. Cohort comparison works across years.
 
 ### 5.1 Teacher Dashboards *(✅ 2026-05-15 — covered by existing surfaces + new card)*
-- [x] Class-level risk distribution + top-3 at-risk students card on [app/teacher/my-classes/[classId]/page.tsx](app/teacher/my-classes/[classId]/page.tsx) via [components/roles/teacher/section-risk-card.tsx](components/roles/teacher/section-risk-card.tsx)
+- [x] Class-level risk distribution + at-risk students on [app/teacher/my-classes/[classId]/page.tsx](app/teacher/my-classes/[classId]/page.tsx) — fed by `getSectionRiskForTeacher` and rendered inside [class-detail.tsx](../components/roles/teacher/class-detail.tsx). *(Corrected 2026-07-25: this line previously credited a `section-risk-card.tsx` component. That file existed but was never imported by any page — the functionality was built inline in `class-detail.tsx` instead. The orphan was deleted in Phase 8.0.4.)*
 - [x] Pattern Alerts: teacher consumes student-scope patterns via the existing [/teacher/student-risk](app/teacher/student-risk/page.tsx) per-section table and the per-class detail page. (Dedicated alerts panel can be split out later if needed.)
 - [x] At-Risk Students panel sorted by score — already live on [/teacher/student-risk](app/teacher/student-risk/page.tsx)
 - [x] Attendance + performance trends — present on existing class detail tabs
@@ -676,7 +676,7 @@ Ready for Phase 3 (Intervention Module) or Phase 4 (Algorithmic Engine), dependi
 - [x] Disparity threshold flags — landed in Phase 5
 - [x] **Disparity threshold now admin-tunable** — `AlgorithmConfig.biasThresholds.highRateMultiplier` (migration `20260515153207_add_risk_override_governance`). Editable in [admin algorithm form](../components/roles/admin/algorithm-config-form.tsx); read in [principal dashboard](app/principal/dashboard/page.tsx). Default 0.5 (+50%).
 - [x] Principal drill-down — already present via [components/principal/risk-breakdown-table.tsx](components/principal/risk-breakdown-table.tsx)
-- [ ] Schema: `BiasMetric` (computed snapshots) — **deferred**. Current implementation computes on-read, which is fine until volume requires precomputation.
+- [x] Schema: `BiasMetric` (computed snapshots) — **resolved 2026-07-25 (Phase 8.0.3): will not be built.** Compute-on-read is the final answer at this scale. At ~420 students the precomputed snapshot buys no measurable performance and introduces a staleness failure mode (a stored metric disagreeing with the dashboard after an engine run). Spec §12 lists the model, but the *capability* — bias distribution across sex / modality / SPED with disparity flags — is delivered by `getBiasBreakdowns`. Revisit only if the population grows an order of magnitude.
 
 ### 7.3 Override Workflow *(✅ 2026-05-15)*
 - [x] Schema: new `RiskOverride` model (migration `20260515153207_add_risk_override_governance`); snapshots originalScore + originalBand at the moment of override so the override survives engine recomputes
@@ -876,6 +876,296 @@ Teachers could see at-risk students daily but had no path to initiate an interve
 - *5.4 cohort analysis (2026-05-16):* Came out smaller than expected. The bulk of the work was the `getCohortYearSlice` query that has to consider four intervention scopes touching a grade (STUDENT enrolled here, SECTION at this grade, GRADE matching the level, SCHOOL always). Page itself is server-rendered with a GET form — no client state. The hidden-field shimming for multi-year checkboxes is the only client JS; should probably replace with a small client component if this grows.
 - *7.5 QA sweep (2026-05-16):* Curl + DB inspection covers most of the Maria scenario but not the truly interactive parts (keyboard P/A/T/E, builder modals, tablet viewport). Flagged 8 items that need a human in front of a browser before we can call Phase 7 "demo-ready" in the strictest sense. Everything else passes.
 - **Still outstanding for Phase 7 Definition of Done:** the tablet-viewport smoke test and a couple of interactive flows. Everything DB-, route-, build-, lint-, and type-verifiable is green.
+
+---
+
+## Phase 8 — Research-Theme Coverage Closure *(planned 2026-07-25)*
+
+**Goal:** Close the gaps between the shipped system and the research thematic findings (Figures 14–16, 20–22), plus three spec-compliance items that drifted during Phases 4–7.
+
+**Origin:** Coverage review of the six thematic-analysis figures against the codebase (2026-07-25). Figures 15, 20, 21 came back essentially complete; Figure 16 and 20 had narrow gaps; Figure 14 (comprehensive student data) and Figure 22 (capacity building) had real gaps.
+
+**Sequencing is load-bearing.** Slice 0 changes every risk score, so it lands before anything that depends on scores or fixtures. Re-tuning demo fixtures twice is wasted work.
+
+### 8.0 Spec-compliance fixes *(Slice 0 — ✅ complete 2026-07-25)*
+
+- [x] **8.0.1 Wire the `interventionHistory` risk dimension.** [lib/risk/engine.ts](../lib/risk/engine.ts) hardcodes this sub-score to `0` ("Phase 3 — no intervention data yet"), but Phase 3 shipped 2026-05-15 and the detector was wired to intervention data in 7.4. Spec §7 defines risk as a weighted sum of **five** dimensions; today it is four with a diluted denominator.
+  - Add `computeInterventionHistoryBreakdown()` — prior participation outcomes + active-plan count. Reuse the cross-year participation fetch shape already in [lib/patterns/detector.ts](../lib/patterns/detector.ts); do not add a second query pattern for the same data.
+  - Extend `ScoringInput`, `RiskFactors`, and `RiskFactors.breakdown` so the explainability panel renders the new dimension (convention 8: never a score without its why).
+  - **Blast radius:** every `RiskAssessment` changes. Re-run the engine across all 3 SYs and re-verify 7.4 fixture expectations (`CONCENTRATED_RISK` >30% of Faraday MODERATE/HIGH; `SUBJECT_STRUGGLE` >40% MATH8 fail rate; `ATTENDANCE_EROSION` on Bacon G7). Budget for fixture re-tuning.
+- [x] **8.0.2 Import Wizard step 6 — historical interventions CSV.** Spec §6.11 defines six import steps; the wizard had four CSV steps. New `lib/import/interventions.ts` validator (LRN, type, scope, start date, end date, outcome) + `app/actions/import/interventions.ts` + a fifth `<CsvStep>` instance. Feeds 8.0.1 — imported history is what makes the intervention-history dimension meaningful on historical years.
+- [x] **8.0.3 `BiasMetric` — decision, not deferral.** Spec §12 lists the model; 7.2 deferred it as "compute-on-read is fine until volume requires precomputation." **Resolution: compute-on-read is final.** At ~420 students the precomputed snapshot buys no measurable performance and adds a staleness failure mode (metrics disagreeing with the dashboard after an engine run). Revisit only if the student population grows an order of magnitude. This closes the open item rather than carrying it forward.
+
+#### Slice 0 — what shipped (2026-07-25)
+
+**Scoring model for the new dimension.** It measures *whether prior support worked* — the one signal the other four dimensions cannot see. Sub-score = recurrence risk (0/10/25/40 by prior completed-plan count) + declining outcomes (20 each, cap 40) − improving outcomes (15 each, cap 30), clamped 0–100.
+
+**The design call worth recording: an active plan contributes zero.** The first instinct is to treat "currently under intervention" as elevated risk. That would double-count (the conditions that justified the plan are already measured by academic/attendance/behavioral) and, worse, create a feedback loop where a counselor helping a student raises that student's risk score. For a system whose thesis is "algorithmic support, human decisions," an algorithm that penalises the act of helping is indefensible. `hasActiveIntervention` is therefore carried in the breakdown for transparency but never enters the arithmetic — and there is a regression test asserting exactly that.
+
+**Shared fetch extracted.** [lib/risk/intervention-history.ts](../lib/risk/intervention-history.ts) — the detector already bulk-fetched cross-year participations; the engine needed the same two facts. Second use, so the fetch moved out (convention 10) and the detector now reads it instead of running its own query. Interpretation stays with each caller: the detector maps to its rule enum, the engine to a sub-score.
+
+**Callers updated (5):** [compute.ts](../app/actions/risk/compute.ts), [what-if.ts](../app/actions/risk/what-if.ts), [seed-demo.ts](../scripts/seed-demo.ts), [run-risk-engine.ts](../scripts/run-risk-engine.ts), [detector.ts](../lib/patterns/detector.ts). The fifth was found by `tsc`, not by grep — making `interventionHistory` a required field on `ScoringInput` rather than optional-with-default is what surfaced it. Worth repeating for the next dimension.
+
+**What-if simulator gained the dimension** (three outcome-count inputs). Deliberately *no* active-plan toggle: a control that never moves the score teaches the wrong lesson in a literacy tool. The copy states the neutrality instead.
+
+**Import grouping.** Historical rows are keyed by LRN because that is how schools hold their records, so a section/grade/school plan arrives as many rows. `groupInterventions` folds rows sharing scope + target + type + both dates into one plan with many participants; individual-scope rows never merge. Imported plans land `COMPLETED` (they carry an outcome, so they are finished work) and are owned by the importing admin — no counselor made that call in-system, and spec §14 wants a named accountable human.
+
+**Known limitation:** the import has no free-text column. `Intervention` has no `description` field (it carries `schedule` / `accommodations` / `staffActions` / `targetOutcomes`), and routing imported prose into one of those would misrepresent it. Spec §6.11 requires only the six columns implemented.
+
+**Verification:**
+- [scripts/verify-intervention-history-score.ts](../scripts/verify-intervention-history-score.ts) — 9 table cases on the sub-score + the active-plan neutrality assertion + a DB scan. All pass.
+- [scripts/verify-interventions-import.ts](../scripts/verify-interventions-import.ts) — 7 validator error paths (unenrolled LRN, bad type/scope/date/outcome, end-before-start, malformed LRN), missing-column detection, grouping (6 rows → 4 plans, section plan with 3 participants, alias normalisation), and a real transactional commit deliberately rolled back. All pass.
+- Engine re-run across all 3 SYs. **Band distribution unchanged** (23-24: 240 LOW · 24-25: 240 LOW · 25-26: 209 LOW / 40 MODERATE / 1 HIGH); all 8 pattern rules still fire at identical counts. 730/730 assessments now carry the breakdown key; 480 carry a non-zero contribution, spread 0/10/25/40/80.
+- No bands flipped because the admin-configured weight for this dimension is **0.05** — an 80 sub-score moves the total by 4 points. The dimension is live and correct; whether 0.05 is the right weight is now a tunable policy question for the principal/admin, not a code gap.
+- `npx tsc --noEmit` clean · `npm run lint` clean · `npm run build` clean (37 routes) · counselor + admin route smoke 200, explainability panel renders the new detail block on a real profile.
+
+### 8.0.4 Dead-code and unreachable-feature sweep *(✅ 2026-07-25)*
+
+A codebase audit run before starting Slice A, after the coverage review raised "is anything here not needed?". Three categories came back.
+
+**1. `lib/rbac.ts` was not enforcing anything — deleted.** It exported `studentVisibilityFilter` / `enrollmentVisibilityFilter` / `canReadCounselingContent`, and **no application code called any of them**; the only consumer was `verify-rbac-scope.ts`, the script that tested it. [CLAUDE.md](../CLAUDE.md) names the query layer as the third RBAC tier and Phase 2a records this module as its implementation, so a reader would reasonably conclude enforcement lived here. It did not.
+
+Enforcement is real, just implemented differently: every teacher-facing query takes the caller's `userId` and verifies assignment ownership itself (`getTeacherClassDetail`, `getSectionRiskForTeacher`, `canTeacherReferStudent`), `getCounselingNotes` short-circuits non-counselors, and `canViewIntervention` holds the visibility matrix. **That pattern is stronger than a composable `where` fragment** — you cannot call the function without passing `userId`, whereas a fragment can be forgotten at any call site. So the fix was to delete the unused abstraction, not to retrofit it.
+
+The real cost was the false assurance: `verify-rbac-scope.ts` was green while testing code production never ran. It has been rewritten to assert against the actual helpers — **18 assertions** covering teacher class scoping, cross-teacher assignment denial, risk-row scoping, the referral scope guard (allow + reject), counselor-only note access across all four roles, and intervention sensitive-field stripping for teacher/admin plus admin participant-list stripping.
+
+**Also seeded 3 demo counseling notes** ([seed-demo.ts](../scripts/seed-demo.ts) `createDemoCounselingNotes`, idempotent via a `[demo]` marker). The counseling-note assertions previously **skipped** for lack of data — a vacuous check on the most sensitive table in the system. They now run.
+
+**2. `dismissRecommendationAction` was implemented but unreachable — now wired.** Full server action with RBAC and `RECOMMENDATION_DISMISSED` audit, and no UI called it. Phase 4.3 records "dismissed drafts remain as audit evidence" as shipped; in practice a counselor could not dismiss anything and drafts accumulated forever. New [dismiss-recommendation-button.tsx](../components/counselor/dismiss-recommendation-button.tsx) (two-step confirm) on the Open Recommendations queue; the action now takes a plain object like its `setPatternStatusAction` sibling and calls `revalidatePath`.
+
+This one matters beyond tidiness: *declining* an algorithmic suggestion is precisely the reflective-literacy behaviour §13 claims the system teaches. Without it, the queue only supported saying yes.
+
+**3. Genuinely dead code — deleted (~300 lines).**
+
+| Removed | Why |
+|---|---|
+| `components/roles/teacher/section-risk-card.tsx` (109 lines) | Never imported; see the Phase 5.1 correction above |
+| `recordGradeAction` (~55 lines) | Superseded by `recordBulkGradesAction`, which is what the gradebook calls. Gradebook was never broken |
+| `getCaseloadWithRisk` (~50 lines) | Superseded by `getCaseloadWithRiskPaged` in 7.7; its comment claimed callers that no longer existed |
+| `getLatestRiskForEnrollment` | No callers |
+| `bandColor`, `isCurrentYear`, `geminiKeyConfigured` | No callers |
+| `PRINCIPAL_DESCRIPTION`, `PRINCIPAL_METRICS` | Leftovers from when the principal landing page used `RoleOverview`. The page is now deliberately bespoke (renders live risk distribution) — divergence kept, orphans dropped |
+
+**Left alone deliberately:**
+- `EnrollmentStatus.TRANSFERRED / DROPPED / GRADUATED` are never set — no admin UI exposes them, so every enrollment is `ACTIVE` forever. Legitimate domain states; note as a limitation rather than delete.
+- `AuditAction.PATTERN_MATCHED` / `RECOMMENDATION_DRAFTED` are never logged individually — the engine audits them in aggregate through `RISK_RECOMPUTED` metadata. Adequate; the enum values are aspirational.
+- `requireSession` is exported but only used internally by `requireRole`. Harmless, and [CLAUDE.md](../CLAUDE.md) convention 2 names both.
+
+**Verified:** `npx tsc --noEmit` clean · `npm run lint` clean · `npm run build` clean · RBAC suite 18/18 · engine + import suites still pass.
+
+---
+
+### 8.1 SEL module *(Slice A — ✅ complete 2026-07-25)*
+
+Figure 14's Behavioral & Socio-Emotional box lists *emotional well-being*, *stress level*, *peer relationships*, and *student self-assessment*. None have anywhere to live today: [student-profile-view.tsx](../components/shell/student-profile-view.tsx) renders a "Behavioral & SEL Records" heading with no SEL data behind it, and `SELAssessment` has been named in [schema.prisma](../prisma/schema.prisma) line 5 as a future model since Phase 1.
+
+- [x] **8.1.1 Schema** — `SELAssessment` (enrollmentId, assessedById, assessedAt, dimension scores) + supporting enums. Migration `add_sel_assessment`. New audit actions `SEL_ASSESSMENT_CREATED`, `SEL_ASSESSMENT_READ`.
+- [x] **8.1.2 Access model** — counselor-managed per spec §6.4. Query helper in [lib/student/queries.ts](../lib/student/queries.ts) mirroring `getCounselingNotes`: non-counselor callers short-circuit to `[]` with no DB roundtrip. Teachers get **limited fields only** (§6.4 is explicit); principal read-only.
+- [x] **8.1.3 Server action + UI** — `app/actions/counselor/sel.ts` (`requireRole("COUNSELOR")`, Zod, audit) + assessment form and timeline in the existing profile section.
+- [x] **8.1.4 Import + demo data** — sixth `<CsvStep>`; extend [seed-demo.ts](../scripts/seed-demo.ts) so fixture students carry SEL history.
+
+**Constraint (binding):** SEL does **not** become a sixth risk weight. Spec §7 fixes five dimensions, and every `AlgorithmConfig` version already recorded assumes that shape. SEL feeds the profile view and, optionally later, pattern rules. Adding a weight is scope expansion — if it becomes desirable, it needs its own decision, not a side effect of this slice.
+
+**Cut-order note:** SEL is #3 in the spec §15 cut order. It was *not* cut — it shipped, and it is the single highest-coverage slice against the research themes.
+
+#### Slice A — what shipped (2026-07-25)
+
+**Access decision (user call, 2026-07-25): counselor + principal only.** The spec pulls two ways — §6.4 says "teacher view restricted to limited fields", but the §5 Teacher feature list never mentions SEL and §14 mandates data minimization. Resolution:
+
+| Role | Sees |
+|---|---|
+| COUNSELOR | all four dimensions + narrative `notes` |
+| PRINCIPAL | all four dimensions, `notes` forced to `null` |
+| TEACHER | nothing — `[]`, no DB roundtrip |
+| ADMIN | nothing — `[]`, no DB roundtrip |
+
+The principal line is the same one already drawn around counseling note bodies (§5, §9): oversight of *levels* without access to clinical narrative. This is the most conservative reading and the easiest to loosen later if teacher coordination turns out to need it.
+
+**Enforcement is in the query, not the component.** `getSELAssessments` decides role access and nulls `notes`; `StudentProfileView` renders whatever it is handed and makes no access decision of its own. `scripts/verify-sel.ts` asserts this directly so it fails if the decision ever migrates upward.
+
+**One scale, constant direction.** All four dimensions use `SELLevel { THRIVING, STABLE, AT_RISK, CRITICAL }` read as *level of concern* — so for `stressLevel`, THRIVING means well-regulated, not "lots of stress". Documented on the enum, in the form hint, and in the import hints, because the intuitive reading of "stress: thriving" is backwards.
+
+**`selfAssessment` is optional by design.** It is the student's own rating, but there is no student portal (§16), so a counselor records it second-hand and it simply may not exist. Nullable in the schema, "Not given" in the UI, blank-allowed in the CSV.
+
+**The import raised a real governance problem.** The wizard is admin-only (§6.11), but admins have no SEL access and SEL is counselor-authored clinical data — attributing imported assessments to the importing admin would have broken the "only counselors author SEL" invariant the QA sweep checks. Solution: a required `assessedByEmail` column validated against active COUNSELOR users. Rows are attributed to that named counselor, never the importer; the audit metadata records who they were attributed *to*, keeping §14 accountability intact. The admin is knowingly writing data they cannot read back — the step hint says so plainly.
+
+`notes` is never echoed into the admin-facing preview table (it shows "provided" / "—"), and the create action audits dimension levels but deliberately **not** note content — the audit log is readable by admin and principal, so copying narrative there would route around the access rule the query enforces.
+
+**Bug found and fixed in Slice 0's work.** The wizard's step container was gated `step >= 2 && step <= 5`, so the Interventions step added in 8.0.2 rendered its stepper button but no form — the step was unreachable. The Slice 0 smoke test grepped for the step *label*, which comes from `STEP_LABELS` and was present regardless, so it passed against a broken feature. Gate widened to `step <= 7`. **Lesson: assert on a string only the step body can produce, never one the navigation also emits.**
+
+**Verified:**
+- [scripts/verify-sel.ts](../scripts/verify-sel.ts) — 15 assertions. Access matrix across all four roles (including "principal NEVER receives notes", counted), read auditing, the only-counselors-author invariant, 5 validator error paths (unenrolled LRN, non-counselor assessor, bad date, bad level, bad optional level), and clean-row handling for case-insensitive levels/emails, US dates, and blank optionals. All pass.
+- Live UI smoke on a seeded student: counselor profile renders the narrative, principal profile returns **0 occurrences** of the same string, both render the SEL section. Teacher surfaces show no SEL anywhere.
+- Demo data: 5 assessments including a two-point improving trajectory on one student and one with no self-rating.
+- `npx tsc --noEmit` clean · `npm run lint` clean · `npm run build` clean · RBAC / engine / import suites still pass.
+
+**Human-verification carry-forward:** clicking through wizard steps 6 and 7 needs a browser — the wizard renders step 1 server-side and later steps are client state, so curl cannot reach them. Both step bodies are confirmed present in the compiled client bundle.
+
+**Not done in this slice (deliberate):** SEL does not feed the risk engine. Spec §7 fixes five weighted dimensions and every recorded `AlgorithmConfig` version assumes that shape — adding a sixth needs its own decision, not a side effect of this slice.
+
+### 8.2 Intervention types + notifications *(Slice B — ✅ complete 2026-07-25)*
+
+- [x] **8.2.1 Align `InterventionType` to spec §6.6.** The enum has 8 values; the spec names 9 partly-different ones. Additive migration for `TUTORING`, `PEER_SUPPORT`, `PARENT_CONFERENCE`, `EXTERNAL_REFERRAL`, `SEL_PROGRAM`, `STUDY_SKILLS_WORKSHOP` — keep the existing 8 so historical rows stay valid. Update builder / edit / referral dropdowns and the ruleId→type mapping in [lib/patterns/recommendations.ts](../lib/patterns/recommendations.ts), which per §10 should be able to emit *parent conference*, *study skills workshop*, and *peer mentorship* but currently cannot. Closes Figure 16's *parent engagement* and Figure 22's *student mentoring*.
+- [x] **8.2.2 In-app notifications.** Spec §5 (Teacher) promises "in-app notifications when a student in their class crosses into a higher risk band." Zero notification code exists; it is item 6 on the 7.5 human-verification handover list and Figure 20's *early warning alerts*.
+  - `Notification` model (userId, kind, title, body, linkHref, readAt, schoolYearId).
+  - Emit on band transition during an engine run — compare new band against the prior `RiskAssessment` for that enrollment, fan out to teachers assigned to the section. Also emit on referral accept/decline (the referring teacher currently has to poll `/teacher/refer`) and on approval-queue arrival for the principal.
+  - Bell + unread count in [components/shell/role-shell.tsx](../components/shell/role-shell.tsx) so all four roles inherit it from one place, plus a notifications list route.
+
+#### Slice B — what shipped (2026-07-25)
+
+**Enum aligned, and the duplication that caused the drift removed.** The type list was copy-pasted across **seven** call sites (builder form, edit form, referral form, three server-action Zod enums, import validator). Adding six values to seven lists is exactly when a shared constant earns its keep, so the vocabulary now lives in [lib/intervention/types.ts](../lib/intervention/types.ts) with `INTERVENTION_TYPES` + `INTERVENTION_TYPE_LABEL`, and every site imports it. Labels are proper prose now ("Study skills workshop") rather than four different ad-hoc `replace(/_/g, " ")` variants. Migration is additive — all four persisted types still resolve.
+
+**Correction to this section's own earlier claim.** The 8.2.1 bullet above says the recommendation mapping "should be able to emit parent conference, study skills workshop, and peer mentorship but currently cannot." Having read §10 against the implemented rules, that overstated it: those §10 examples attach to *Transition Difficulty*, a grade-level rule still deferred since Phase 4, and to SEL-driven risk, which no rule consumes. The mappings were therefore **left unchanged** — inventing clinical routing (e.g. escalating `DISENGAGEMENT_SIGNAL` from a counseling check-in to a parent conference) to satisfy a checkbox would be worse than the gap. The new types are available for **human selection** in the builder, edit, and referral forms today; automated emission waits on the rules that would justify it.
+
+**Notifications.** New `Notification` model + `NotificationKind`, with three emitters:
+
+| Trigger | Recipients | Why it was needed |
+|---|---|---|
+| Risk band increases during a recompute | every teacher assigned to the student's section (advisers included — an adviser is just an assignment row) | the spec §5 promise, unimplemented since Phase 1 |
+| Referral accepted / declined | the referring teacher | they previously had to revisit `/teacher/refer` and re-read the list to learn the outcome |
+| Broader-scope plan enters PENDING_APPROVAL | every active principal | plans otherwise surfaced only if someone opened the approval queue |
+
+**Payloads are deliberately dumb.** A notification carries a title, a one-line body, and a link — never rationale, counseling content, or SEL detail. The recipient follows the link and the normal query-layer rules apply there. This means a notification can never become a side channel around RBAC, which matters because the fan-out is the widest audience in the system.
+
+**Only an *increase* notifies.** Improvement, an unchanged band, and a first-ever score all stay silent — the last one because a student's first score has no band to have crossed, and treating it as a crossing would fire a notification for all ~250 enrollments on the first engine run of a year.
+
+**Testability refactor mid-slice.** The fan-out started as straight-line code inside `computeRiskAction`, which needs a session and so could not be reached from a script. Extracted to a pure `buildBandIncreaseNotifications(crossings, teachersBySection, schoolYearId)`; the action now only supplies data and persists the result. Six assertions now cover the rule directly, including the orphan-section case.
+
+**Known behaviour, deliberate:** emission lives in the server action, so `scripts/run-risk-engine.ts` and `seed-demo.ts` recompute risk **without** notifying. That is wanted — bulk seeding 250 enrollments should not manufacture an inbox — but it does mean the admin "Run engine" button is the only path that notifies. Noted here so it is not mistaken for a bug later.
+
+**Verified:**
+- [scripts/verify-notifications.ts](../scripts/verify-notifications.ts) — **33 assertions**: enum shape read straight from `pg_enum` (14 values, all six new ones present, shared constant matches the DB exactly, all persisted types still valid), band-transition truth table including the improvement and first-score cases, fan-out composition, recipient dedup, emission, per-user isolation, and mark-read scoping (a different user's `updateMany` affects **0 rows**). Cleans up its own test rows.
+- Route × role smoke: all four `/{role}/notifications` return 200 for their own role, teacher → `/counselor/notifications` returns 307. Bell renders in the shared shell.
+- `npx tsc --noEmit` clean · `npm run lint` clean · `npm run build` clean (41 routes) · RBAC / SEL / engine / import suites all still pass.
+
+### 8.3 AI literacy surfaces *(Slice C — ✅ complete 2026-07-25)*
+
+- [x] **8.3.1 "How does this work?" pages.** Spec §6.9, deferred since Phase 4. Server components under `/learn`: how the risk score is computed, what each pattern rule looks for, what the system does and does not decide. **Render the weights from the live `AlgorithmConfig` row, not hardcoded prose** — otherwise the page silently drifts every time an admin retunes the algorithm. Link from every explainability panel and risk badge.
+- [x] **8.3.2 Tooltips on algorithmic outputs.** §6.9's last bullet. One shared `<Explain>` primitive applied to risk bands, sub-score bars, pattern evidence, and disparity flags.
+- [x] **8.3.3 AI Literacy Assistant — remains cut.** #1 in the spec §15 cut order; needs a Gemini chat-session API plus multi-turn UI. Recorded here as a deliberate boundary so it stops reading as unfinished work.
+
+#### Slice C — what shipped (2026-07-25)
+
+**`/learn` is deliberately outside the role prefixes.** Four pages — hub, risk score, pattern rules, and what the system decides — reachable by all four roles at the same URLs. `proxy.ts` already requires a session for anything not public, and `ROLE_PREFIXES` doesn't cover `/learn`, so this needed no proxy change. The reason to share one surface rather than build `/{role}/learn` four times: "the counselor was shown a different version of the rules" would defeat the purpose. Linked from every role's nav, the explainability panel ("How does this work?"), and the pattern inbox.
+
+**The risk-score page cannot drift, and that was tested by breaking it.** Weights and band cut-offs are read from the active `AlgorithmConfig` at render time; only the *prose* describing each dimension is static. Verified by retuning the live config mid-test:
+
+| | academic | attendance | behavioral | intervention history | profile | LOW band |
+|---|---|---|---|---|---|---|
+| before | 40% | 30% | 20% | 5% | 5% | Below 40 |
+| after retune | 10% | 10% | 10% | 60% | 10% | Below 25 |
+| restored | 40% | 30% | 20% | 5% | 5% | Below 40 |
+
+The page followed the config in both directions. Config was restored to `v1` defaults afterwards. Shares are rendered as *normalised* percentages rather than raw weights, because the engine normalises — printing the raw numbers would misstate the maths whenever they don't sum to 1.
+
+**Known drift risk, recorded rather than hidden:** the pattern-rule thresholds on `/learn/patterns` are prose transcribed from [lib/patterns/rules.ts](../lib/patterns/rules.ts), because unlike the weights those numbers are compiled into the rule functions rather than stored in config. Changing a rule threshold means updating that page by hand. Noted at the top of the file. Moving rule thresholds into `AlgorithmConfig` would fix it properly and is worth doing if the rules ever become tunable.
+
+**`<Explain>` is CSS-only.** A JS-free hover/focus popover, so the five sub-score bars in a server-rendered panel don't become five hydrated client islands on a page that already renders dozens of them. Keyboard-reachable via `tabIndex` + `focus-within` rather than hover-only.
+
+**Tone was a deliberate choice.** These pages are the thesis's AI-literacy artefact, so they say plainly what the score *is not*: not a prediction, not a decision, not better than the data underneath it, and overridable. `/learn/decisions` puts "the system does" and "people do" side by side, and states that the language model writes prose and nothing else — if it is unavailable, every number stays exactly where it was, which is the test of whether it was ever doing the real work.
+
+**Scope note:** 8.3.2 as planned said tooltips on "risk bands, sub-score bars, pattern evidence, and disparity flags". Shipped on the sub-score bars plus the panel-level "How does this work?" link and the pattern-inbox link. Evidence and disparity-flag tooltips were not added — the evidence payloads are already rendered in full prose beside the match, and the disparity flag already carries an inline explanation, so a tooltip would restate what is on screen. Recorded as a narrowing rather than left implied.
+
+**Verified:** all four `/learn` routes return 200 for all four roles; unauthenticated returns 307. `npx tsc --noEmit` clean · `npm run lint` clean · `npm run build` clean (45 routes).
+
+### 8.4 Declared non-goals
+
+Recorded so the research write-up can defend these as design positions rather than omissions:
+
+- **Contextual student data** (socioeconomic status, health concerns, access to learning resources, detailed family background) — Figure 14 lists them; collecting them contradicts spec §14 **data minimization**. The system holds guardian contact, SPED status, and learning modality, and stops there.
+- **Parent participation, student-led helpdesk, LAC, teacher training, ICT support, CPD** (Figure 22) — organizational practices, not software surfaces. §16 already excludes the parent/student portal and automated parent notifications.
+- **Trained-ML predictive modeling** (Figure 15 *predictive insights*) — §16 excludes it. The rule-based engine is the deliberate choice that makes per-factor explainability possible at all; an ML model would forfeit the AI-literacy contribution the research argues for.
+- **Assessment calendar, digital learning resources, blended-learning delivery** (Figure 16) — LMS territory, outside a student-support platform.
+- **Learning competencies and completion of requirements** (Figure 14) — *added 2026-07-25.* These are DepEd LIS / report-card records: competency codes, mastery levels, and requirement checklists belong to the official grading system this platform reads *from*, not to a support-and-intervention layer. The system holds scores by subject, quarter, and assessment kind, which is what the risk engine needs. Duplicating the competency framework would create a second source of truth for grades — the exact thing §6.2 avoids by keeping one `Grade` model.
+- **Class participation and student engagement as captured fields** (Figure 14) — *added 2026-07-25.* Both are teacher judgements rather than events, and capturing them as a per-student rating would add a subjective field to the risk pipeline with no inter-rater reliability behind it. Engagement is instead *inferred* from recorded behaviour — the `DISENGAGEMENT_SIGNAL` rule combines tardiness, absence, and incident data precisely because those are observable. Teachers who want to record a judgement have the behavioral log and intervention observation notes.
+- **System evaluation, feedback mechanisms, and policy review** (Figure 22) — *added 2026-07-25.* These are research and governance *activities*, not software surfaces: evaluating whether the system helped is the thesis's own methodology, and school policy review happens in meetings. The platform's contribution is making the evidence reviewable — the audit log, override history, bias dashboard, and intervention outcome tracking are what such a review would read. Building an in-app "rate this system" form would produce data nobody has a plan to act on.
+
+*(The first three above were the undeclared gaps surfaced by the post-Phase-8 review. Recording them here converts an oversight into a stated boundary. Nothing was removed to do this — none of them had ever been built.)*
+
+### Phase 8 Definition of Done
+
+- [x] Risk scores include a non-zero `interventionHistory` contribution for students with intervention history, visible in the explainability panel
+- [x] All six spec §6.11 import steps present in the wizard
+- [x] Counselor records an SEL assessment; principal sees levels but never notes; teacher and admin get nothing; `SEL_ASSESSMENT_READ` audited *(amended from "teacher sees limited fields" — the access question was put to the user during 8.1 and resolved to counselor + principal only; see the Slice A notes)*
+- [x] Teacher receives an in-app notification when one of their students crosses into a higher band
+- [x] `/learn` pages render current algorithm weights from the active `AlgorithmConfig`
+- [x] Demo fixtures still fire every pattern rule after the scoring change
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build` clean; route × role smoke matrix passes
+
+**Estimated size:** ~2,000–2,400 net new LOC across ~5 migrations and ~4–6 working sessions (≈10–12% growth on the current ~20,400 LOC in `app/` + `lib/` + `components/`). Benchmark: the 7.10 referral slice was ~280 LOC for its counselor half alone.
+
+### Phase 8 retrospective
+
+- **The audit was worth more than any single feature.** Slice 0.4 started as "delete some dead code" and surfaced two things that mattered more: `lib/rbac.ts` looked like the query-layer RBAC and enforced nothing, and `dismissRecommendationAction` was fully built but unreachable. Neither was a *bug* — the RBAC works, just elsewhere — but both meant a reader would have believed something false about the system. **Dead code that looks load-bearing is worse than dead code that looks dead.**
+- **A green test can be worse than no test.** `verify-rbac-scope.ts` passed for months while exercising a module production never called, and it printed rather than asserted. Its counseling-note check also *skipped* silently for want of demo data — a vacuous check on the most sensitive table in the system. Rewritten to 18 real assertions, plus seeded notes so the skip cannot recur. Worth re-reading any suite that has never failed.
+- **Verify on a string only the feature can produce.** The Slice 0 smoke test for the new import step grepped for the step *label*, which the stepper emits whether or not the step body renders. It passed against a step that was unreachable because of a `step <= 5` gate. Caught in Slice A, one slice later.
+- **Making something testable beat testing around it.** The notification fan-out began as straight-line code inside a server action, unreachable without a session. Extracting `buildBandIncreaseNotifications` turned six important cases (improvement, unchanged band, first-ever score, orphan section) into assertions. Same pattern would help elsewhere.
+- **Prove a "cannot drift" claim by breaking it.** The `/learn` page claims to track live config; that was verified by retuning the weights mid-test and watching every number move, then restoring. A claim of this shape is otherwise indistinguishable from a well-written lie.
+- **Type the new field as required, not optional-with-default.** Adding `interventionHistory` to `ScoringInput` as required is what made `tsc` find the fifth caller (`scripts/run-risk-engine.ts`). Grep would have missed it.
+- **Three claims in this tracker were wrong before Phase 8 corrected them:** Phase 5.1 credited a component never imported; 8.2.1 overstated what §10 required of the recommendation mapping; the Phase 8 DoD described an SEL access model that the user's decision superseded. All three were written in good faith and all three would have misled someone. Retrospectives are worth as much as plans.
+- **Two governance questions had no technical answer.** SEL visibility (§6.4 vs §5) went to the user rather than being defaulted. Attributing imported SEL to a counselor rather than the importing admin came out of the same principle. When a decision is about who may see a child's data, "pick a sensible default and move on" is the wrong instinct.
+- **Restraint counted twice.** The recommendation mappings were left alone rather than inventing clinical routing to satisfy a checkbox, and SEL was deliberately kept out of the risk engine because §7 fixes five weighted dimensions and every recorded `AlgorithmConfig` version assumes that shape.
+
+**Where Phase 8 leaves the system:** every figure from the research coverage review is now either implemented, explicitly out of scope with a stated reason (§8.4), or blocked on rules that need multiple years of data. The five risk dimensions all contribute. All six import steps exist. The literacy surface is real and self-updating.
+
+**Open follow-ups:**
+- Pattern-rule thresholds on `/learn/patterns` are hand-transcribed prose; moving them into `AlgorithmConfig` would remove the last drift risk in that surface.
+- The `interventionHistory` weight is `0.05`, so the newly-wired dimension moves a total score by at most ~4 points. Correct and live, but whether 0.05 is the right weight is a policy question for the principal/admin before any demo.
+- Grade- and school-level pattern rules remain deferred (they need ≥2 full years).
+- AI Literacy Assistant remains cut (spec §15 cut order #1).
+
+---
+
+## Phase 9 — Scheduled Recompute & Reports ✅ *(complete 2026-07-25)*
+
+**Goal:** close the two remaining *buildable* gaps from the post-Phase-8 review. Everything else outstanding was either declared a non-goal (§8.4) or is blocked on rules that need more school years.
+
+### 9.1 Scheduled risk recompute *(✅)*
+
+Deferred since Phase 4 ("recompute trigger + 24h cache", "scheduled weekly recompute"). Phase 8 made it more urgent than it looked: notifications are emitted by the engine run, and the only trigger was the admin's "Run engine" button — so the spec §5 promise was live only as often as someone remembered to click.
+
+- [x] **Extracted `runRiskEngine`** into [lib/risk/run-engine.ts](../lib/risk/run-engine.ts). The orchestration (score → detect → recommend → notify → audit) had lived inside `computeRiskAction`, which needs a session and so could not be reused. The action is now 68 lines of auth, validation, and revalidation; the engine is one implementation with two callers, so a scheduled run and a manual run cannot drift.
+- [x] **Cron endpoint** at [app/api/cron/recompute/route.ts](../app/api/cron/recompute/route.ts). Accepts GET or POST (Vercel Cron issues GET; system cron usually POST). Authenticated by `CRON_SECRET` as a bearer token — **and it refuses to run when the secret is unset** rather than defaulting open, so a missing env var can never turn this into an unauthenticated "recompute everything" button.
+- [x] **Always targets the active year.** A schedule that silently recomputed a historical year would rewrite settled records.
+- [x] **Attributed to no user.** `AuditLog.userId` was already nullable, so an unattended run audits as `userId = null` with `trigger: "scheduled"` in metadata, rather than being blamed on whoever configured the schedule.
+- [x] `/api/cron` added to `PUBLIC_PREFIXES` in [proxy.ts](../proxy.ts) with a comment explaining why that is safe; `CRON_SECRET` documented in `.env.example` with a ready-to-paste crontab line.
+
+**Verified live, including the part that matters:**
+
+| Request | Result |
+|---|---|
+| no `Authorization` header | 401 |
+| wrong secret | 401 |
+| correct secret, wrong scheme (no `Bearer `) | 401 |
+| correct bearer token | 200 · `computed: 250` |
+
+Then the headline claim was proved rather than asserted: a `LOW` prior band was planted on a student who scores `MODERATE`, and an **unattended cron call** detected the crossing and emitted **6 notifications** — one per teacher of that section — with the audit row system-attributed. Planted row and test notifications were deleted afterwards.
+
+**Deliberately unchanged:** `seed-demo.ts` keeps its own bulk-insert engine loop. It uses batched writes for ~730 assessments across three years and should not notify — manufacturing an inbox while seeding would be wrong.
+
+### 9.2 Report generation *(✅)*
+
+Figure 20's *automated reports* / *easy report generation*. Before this, the only export in the system was the cohort-analysis CSV on one principal page.
+
+- [x] **Report registry** ([lib/reports/registry.ts](../lib/reports/registry.ts)) — each report declares the roles that may run it **and scopes its own rows to the caller**. Both matter: the role list decides whether the button appears, the generator decides what a teacher actually gets. A link is not a permission.
+- [x] Four reports: **risk roster** (counselor/principal/teacher), **intervention pipeline & outcomes** (counselor/principal), **attendance summary by section** (all four roles), **bias monitoring breakdown** (principal only).
+- [x] **Restricted content never enters an export.** Intervention rationale, counseling notes, and SEL narrative are absent by construction — a CSV leaves the access-controlled UI behind, so anything in it is effectively unprotected from that point on. Asserted in the verification script against real seeded rationale text.
+- [x] **Every export is audited** (`REPORT_EXPORTED`, new enum value + migration): who, which report, how many rows, which role.
+- [x] Shared `/reports` page outside the role prefixes (same reasoning as `/learn`), linked from all four role navs.
+
+**CSV correctness got real attention** ([lib/reports/csv.ts](../lib/reports/csv.ts)) because these files go to spreadsheets, not parsers:
+- RFC 4180 quoting — a counselor's note containing a comma must not shift every following column.
+- **Formula-injection defence:** cells beginning `=`, `+`, `-`, or `@` are prefixed with a quote. Exported rows contain user-typed names and notes, and a cell starting `=` is executable the moment someone opens it in Excel.
+- **UTF-8 BOM** on the response, so a roster with `ñ` or `é` opens correctly rather than as mojibake — this is a Philippine student roster.
+
+**Verified:** [scripts/verify-phase-9.ts](../scripts/verify-phase-9.ts) — **33 assertions** covering CSV escaping and injection defence, filename shape, role gating per report, row-level scoping (teacher 5 rows vs counselor 250, every teacher row inside a section they teach, **a teacher with no assignments gets zero rows rather than the whole school**), restricted-content absence, and every report executing with rows matching header width. Plus a live 4×4 role × report matrix over HTTP: exactly the intended 200s and 403s, 307 unauthenticated, 404 unknown report, and an audit trail showing teacher=5 / counselor=250 for the same report.
+
+### Phase 9 retrospective
+
+- **The stale-server trap cost ten minutes and was worth recording.** The report matrix first came back as `500`s for every *allowed* report while the `403`s were correct. Cause: a dev server left running from the previous phase's smoke test held a Prisma client predating the `REPORT_EXPORTED` migration, so the role check (pure JS) passed and the audit write then failed. `npm run dev` had silently failed to bind with `EADDRINUSE` and I was testing the old process. **Check what is actually listening before believing a smoke result** — and prefer failing loudly over reusing a port.
+- **Extracting for testability paid off twice.** `buildBandIncreaseNotifications` was pulled out of the action in Phase 8 to make it assertable; `runRiskEngine` was pulled out in Phase 9 to make it *reusable*. The second refactor was trivial because the first had already separated the pure part.
+- **Two features, one dependency.** Scheduling was worth building on its own, but its real value was fixing something Phase 8 shipped half-finished: notifications that only fired when a human pressed a button. Worth noticing that a "new feature" was really the completion of an old one.
+- **Exports are a governance surface, not a convenience.** The interesting decisions in 9.2 were all about what *must not* be in the file, and about formula injection — a risk that only exists because the output is opened by spreadsheet software rather than read by code.
 
 ---
 

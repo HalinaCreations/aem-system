@@ -2,18 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { INTERVENTION_TYPES, INTERVENTION_TYPE_LABEL } from "@/lib/intervention/types";
 import { createReferralAction } from "@/app/actions/teacher/referrals";
 
 type Student = { id: string; label: string; sectionLabel: string };
-
-const TYPE_OPTIONS: { value: string; label: string }[] = [
-  { value: "ACADEMIC_SUPPORT", label: "Academic support" },
-  { value: "COUNSELING_SESSION", label: "Counseling session" },
-  { value: "IMMEDIATE_COUNSELING", label: "Immediate counseling" },
-  { value: "POSITIVE_REINFORCEMENT", label: "Positive reinforcement" },
-  { value: "CASE_REVIEW", label: "Case review" },
-  { value: "SUBJECT_REMEDIATION", label: "Subject remediation" },
-];
 
 const URGENCY_OPTIONS = ["LOW", "MEDIUM", "HIGH"] as const;
 
@@ -66,8 +58,8 @@ export default function ReferralForm({ students }: { students: Student[] }) {
           onChange={(e) => setSuggestedType(e.target.value)}
           className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
         >
-          {TYPE_OPTIONS.map((t) => (
-            <option key={t.value} value={t.value}>{t.label}</option>
+          {INTERVENTION_TYPES.map((t) => (
+            <option key={t} value={t}>{INTERVENTION_TYPE_LABEL[t]}</option>
           ))}
         </select>
       </label>

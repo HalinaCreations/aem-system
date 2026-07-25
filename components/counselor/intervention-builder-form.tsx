@@ -7,23 +7,13 @@ import type {
   InterventionTargets,
   RecommendationPrefill,
 } from "@/lib/intervention/queries";
+import { INTERVENTION_TYPES, INTERVENTION_TYPE_LABEL } from "@/lib/intervention/types";
 
 const SCOPE_OPTIONS = [
   { value: "STUDENT", label: "Individual", description: "Activates on save." },
   { value: "SECTION", label: "Section", description: "Requires principal approval." },
   { value: "GRADE", label: "Grade level", description: "Requires principal approval." },
   { value: "SCHOOL", label: "School-wide", description: "Requires principal approval." },
-] as const;
-
-const TYPE_OPTIONS = [
-  "ACADEMIC_SUPPORT",
-  "COUNSELING_SESSION",
-  "IMMEDIATE_COUNSELING",
-  "POSITIVE_REINFORCEMENT",
-  "CASE_REVIEW",
-  "SECTION_INTERVENTION",
-  "SUBJECT_REMEDIATION",
-  "ATTENDANCE_PROGRAM",
 ] as const;
 
 type Scope = (typeof SCOPE_OPTIONS)[number]["value"];
@@ -45,7 +35,7 @@ export default function InterventionBuilderForm({ targets, prefill }: Props) {
 
   const [scope, setScope] = useState<Scope>(initialScope);
   const [scopeTargetId, setScopeTargetId] = useState<string>(prefill?.scopeTargetId ?? "");
-  const [type, setType] = useState<(typeof TYPE_OPTIONS)[number]>(initialType);
+  const [type, setType] = useState<(typeof INTERVENTION_TYPES)[number]>(initialType);
   const [startDate, setStartDate] = useState<string>(TODAY);
   const [endDate, setEndDate] = useState<string>("");
   const [schedule, setSchedule] = useState<string>("");
@@ -199,13 +189,13 @@ export default function InterventionBuilderForm({ targets, prefill }: Props) {
           </label>
           <select
             value={type}
-            onChange={(e) => setType(e.target.value as (typeof TYPE_OPTIONS)[number])}
+            onChange={(e) => setType(e.target.value as (typeof INTERVENTION_TYPES)[number])}
             disabled={pending}
             className="mt-1 w-full rounded-lg border border-slate-200 bg-white p-2 text-sm"
           >
-            {TYPE_OPTIONS.map((t) => (
+            {INTERVENTION_TYPES.map((t) => (
               <option key={t} value={t}>
-                {t.replace(/_/g, " ")}
+                {INTERVENTION_TYPE_LABEL[t]}
               </option>
             ))}
           </select>
@@ -436,11 +426,11 @@ function SearchableSelect({
 // Algorithm output uses short slugs like "ACADEMIC_TUTORING"; map them to our
 // stricter intervention type enum. Unknown values fall through to a sensible
 // default so the counselor can override.
-function mapSuggestedType(slug?: string): (typeof TYPE_OPTIONS)[number] {
+function mapSuggestedType(slug?: string): (typeof INTERVENTION_TYPES)[number] {
   if (!slug) return "ACADEMIC_SUPPORT";
   const upper = slug.toUpperCase();
-  if (TYPE_OPTIONS.includes(upper as (typeof TYPE_OPTIONS)[number])) {
-    return upper as (typeof TYPE_OPTIONS)[number];
+  if (INTERVENTION_TYPES.includes(upper as (typeof INTERVENTION_TYPES)[number])) {
+    return upper as (typeof INTERVENTION_TYPES)[number];
   }
   if (upper.includes("ATTENDANCE")) return "ATTENDANCE_PROGRAM";
   if (upper.includes("COUNSEL")) return "COUNSELING_SESSION";

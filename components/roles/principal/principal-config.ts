@@ -2,8 +2,6 @@ import type { NavSection, ThemeName } from "@/components/shell/role-shell";
 
 export const PRINCIPAL_BADGE = "Principal workspace";
 export const PRINCIPAL_TITLE = "Oversight and decision dashboard";
-export const PRINCIPAL_DESCRIPTION =
-  "Monitor school-wide patterns, validate high-impact decisions, and keep governance visible across the system.";
 export const PRINCIPAL_THEME: ThemeName = "rose";
 
 export const PRINCIPAL_NAV: NavSection[] = [
@@ -36,10 +34,17 @@ export const PRINCIPAL_NAV: NavSection[] = [
     description:
       "Inspect audit history, outcome trends, and risk overrides with mandatory written accountability.",
   },
+  {
+    title: "How this system works",
+    href: "/learn",
+    description:
+      "Plain-language explanation of how the risk score is computed, what each pattern rule looks for, and what the system decides versus what you decide.",
+  },
+  {
+    title: "Reports",
+    href: "/reports",
+    description:
+      "Download CSV extracts of the data behind your screens — risk rosters, intervention outcomes, attendance, and governance breakdowns.",
+  },
 ];
 
-export const PRINCIPAL_METRICS = [
-  { label: "Oversight level", value: "School-wide" },
-  { label: "Approval scope", value: "Broad interventions" },
-  { label: "Governance focus", value: "Bias and overrides" },
-];

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { getActiveSchoolYear } from "@/lib/active-year";
 import { logAudit } from "@/lib/audit";
+import { emitNotifications } from "@/lib/notifications";
 
 const inputSchema = z.object({
   referralId: z.string().min(1),
@@ -28,7 +29,11 @@ export async function declineReferralAction(input: unknown): Promise<DeclineRefe
 
   const referral = await prisma.interventionReferral.findFirst({
     where: { id: referralId, status: "PENDING", schoolYearId: sy.id },
-    select: { id: true },
+    select: {
+      id: true,
+      referredById: true,
+      student: { select: { firstName: true, lastName: true } },
+    },
   });
   if (!referral) return { ok: false, error: "Referral not found or already reviewed." };
 
@@ -49,6 +54,19 @@ export async function declineReferralAction(input: unknown): Promise<DeclineRefe
     resourceId: referral.id,
     metadata: { reason },
   });
+
+  // The referring teacher had no way to learn the outcome short of revisiting
+  // /teacher/refer and re-reading the list.
+  await emitNotifications([
+    {
+      userId: referral.referredById,
+      kind: "REFERRAL_DECLINED",
+      title: `Referral declined — ${referral.student.firstName} ${referral.student.lastName}`,
+      body: reason,
+      linkHref: "/teacher/refer",
+      schoolYearId: sy.id,
+    },
+  ]);
 
   revalidatePath("/counselor/referrals");
   revalidatePath("/teacher/refer");

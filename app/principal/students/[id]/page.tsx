@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/session";
 import { getActiveSchoolYear } from "@/lib/active-year";
-import { getLatestRiskForStudent, getStudentProfile } from "@/lib/student/queries";
+import { getLatestRiskForStudent, getSELAssessments, getStudentProfile } from "@/lib/student/queries";
 import { generateRiskNarrative } from "@/lib/ai/narrative";
 import StudentProfileView from "@/components/shell/student-profile-view";
 
@@ -11,13 +11,20 @@ export default async function PrincipalStudentProfilePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireRole("PRINCIPAL");
+  const session = await requireRole("PRINCIPAL");
   const { id } = await params;
   const sy = await getActiveSchoolYear();
   if (!sy) notFound();
 
   const profile = await getStudentProfile(id, sy.id);
   if (!profile) notFound();
+
+  // Levels only — getSELAssessments nulls out `notes` for the principal.
+  const selAssessments = await getSELAssessments(
+    profile.enrollment.id,
+    session.user.role,
+    session.user.id,
+  );
 
   const latestRisk = await getLatestRiskForStudent(id, sy.id);
   const aiConsentRevoked = profile.consents.some(
@@ -45,7 +52,12 @@ export default async function PrincipalStudentProfilePage({
       >
         ← Back to Students
       </Link>
-      <StudentProfileView profile={profile} viewerRole="PRINCIPAL" risk={risk} />
+      <StudentProfileView
+        profile={profile}
+        viewerRole="PRINCIPAL"
+        selAssessments={selAssessments}
+        risk={risk}
+      />
     </div>
   );
 }

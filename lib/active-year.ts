@@ -49,6 +49,3 @@ export async function setActiveSchoolYearCookie(id: string): Promise<void> {
   });
 }
 
-export function isCurrentYear(year: SchoolYear): boolean {
-  return year.isActive;
-}

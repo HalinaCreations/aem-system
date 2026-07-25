@@ -1,6 +1,10 @@
 // Read-only server queries for student profiles + caseload listing.
-// Callers verify session/role before calling these (defense-in-depth: queries
-// here don't apply RBAC themselves — they're used inside role-guarded pages).
+//
+// Callers verify session/role before calling these. Most helpers here rely on
+// that page-level guard and apply no filtering of their own — but the two that
+// touch counselor-held content, `getCounselingNotes` and `getSELAssessments`,
+// enforce role at the query layer themselves and audit every read. Don't move
+// that decision up into a page or component.
 
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
@@ -12,6 +16,7 @@ import type {
   ConsentStatus,
   Prisma,
   Role,
+  SELLevel,
   Sex,
   SpedStatus,
 } from "@prisma/client";
@@ -375,6 +380,67 @@ export async function getLatestRiskForStudent(
         }
       : null,
   };
+}
+
+// ─── SEL assessments (counselor + principal, audited) ───────────────────────
+
+export type SELAssessmentRow = {
+  id: string;
+  assessedAt: string;
+  assessorName: string;
+  emotionalWellbeing: SELLevel;
+  stressLevel: SELLevel;
+  peerRelationships: SELLevel;
+  selfAssessment: SELLevel | null;
+  /** Null for the principal — narrative context is counselor-only, like note bodies. */
+  notes: string | null;
+};
+
+/**
+ * SEL assessments for an enrollment (spec §6.4 — counselor-managed).
+ *
+ * Access is decided here, not in the UI:
+ * - COUNSELOR — every field, including `notes`.
+ * - PRINCIPAL — dimension levels for oversight, `notes` forced to null. Same
+ *   line the system already draws around counseling note bodies (§5, §9).
+ * - TEACHER / ADMIN — `[]` with no DB roundtrip. SEL never appears in the
+ *   teacher feature list (§5), and admin is metadata-only by design.
+ *
+ * Every successful read is audited as SEL_ASSESSMENT_READ.
+ */
+export async function getSELAssessments(
+  enrollmentId: string,
+  viewerRole: Role,
+  viewerUserId: string,
+): Promise<SELAssessmentRow[]> {
+  if (viewerRole !== "COUNSELOR" && viewerRole !== "PRINCIPAL") return [];
+
+  const rows = await prisma.sELAssessment.findMany({
+    where: { enrollmentId },
+    include: { assessedBy: { select: { name: true } } },
+    orderBy: { assessedAt: "desc" },
+  });
+
+  const includeNotes = viewerRole === "COUNSELOR";
+
+  await logAudit({
+    action: "SEL_ASSESSMENT_READ",
+    userId: viewerUserId,
+    resourceType: "SELAssessment",
+    resourceId: enrollmentId,
+    metadata: { enrollmentId, count: rows.length, viewerRole, notesIncluded: includeNotes },
+  });
+
+  return rows.map((r) => ({
+    id: r.id,
+    assessedAt: r.assessedAt.toISOString(),
+    assessorName: r.assessedBy.name,
+    emotionalWellbeing: r.emotionalWellbeing,
+    stressLevel: r.stressLevel,
+    peerRelationships: r.peerRelationships,
+    selfAssessment: r.selfAssessment,
+    notes: includeNotes ? r.notes : null,
+  }));
 }
 
 // ─── Counseling notes (counselor-only, audited) ─────────────────────────────

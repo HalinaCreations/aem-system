@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/session";
 import { getActiveSchoolYear } from "@/lib/active-year";
 import {
   getCounselingNotes,
+  getSELAssessments,
   getLatestRiskForStudent,
   getStudentProfile,
 } from "@/lib/student/queries";
@@ -24,6 +25,12 @@ export default async function CounselorStudentProfilePage({
   if (!profile) notFound();
 
   const counselingNotes = await getCounselingNotes(
+    profile.enrollment.id,
+    session.user.role,
+    session.user.id,
+  );
+
+  const selAssessments = await getSELAssessments(
     profile.enrollment.id,
     session.user.role,
     session.user.id,
@@ -59,6 +66,7 @@ export default async function CounselorStudentProfilePage({
         profile={profile}
         viewerRole="COUNSELOR"
         counselingNotes={counselingNotes}
+        selAssessments={selAssessments}
         risk={risk}
       />
     </div>

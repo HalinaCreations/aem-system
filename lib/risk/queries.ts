@@ -16,26 +16,6 @@ export type LatestRisk = {
   factors: RiskFactors;
 };
 
-export async function getLatestRiskForEnrollment(
-  enrollmentId: string,
-): Promise<LatestRisk | null> {
-  const row = await prisma.riskAssessment.findFirst({
-    where: { enrollmentId },
-    orderBy: { computedAt: "desc" },
-    take: 1,
-  });
-  if (!row) return null;
-  return {
-    assessmentId: row.id,
-    score: row.score,
-    band: row.band as RiskBandLabel,
-    computedAt: row.computedAt.toISOString(),
-    factors: row.factors as unknown as RiskFactors,
-  };
-}
-
-// ─── Caseload with risk scores ───────────────────────────────────────────────
-
 export type CaseloadRiskRow = {
   enrollmentId: string;
   studentId: string;
@@ -246,56 +226,6 @@ export async function getCaseloadBandSummary(schoolYearId: string): Promise<{
   }
   return { scored, high, moderate, total: enrollments.length };
 }
-
-export async function getCaseloadWithRisk(
-  schoolYearId: string,
-): Promise<CaseloadRiskRow[]> {
-  // Kept for the cohort/risk callers that still want the full list. Prefer
-  // `getCaseloadWithRiskPaged` for any UI surface.
-  const enrollments = await prisma.studentEnrollment.findMany({
-    where: { schoolYearId, status: "ACTIVE" },
-    include: {
-      student: { select: { id: true, lrn: true, firstName: true, lastName: true } },
-      section: { select: { name: true, gradeLevel: true } },
-      riskAssessments: {
-        orderBy: { computedAt: "desc" },
-        take: 1,
-        select: { score: true, band: true, computedAt: true },
-      },
-      riskOverrides: {
-        where: { clearedAt: null },
-        orderBy: { createdAt: "desc" },
-        take: 1,
-        select: { overrideBand: true },
-      },
-    },
-    orderBy: [{ student: { lastName: "asc" } }, { student: { firstName: "asc" } }],
-  });
-
-  return enrollments.map((e) => {
-    const latest = e.riskAssessments[0] ?? null;
-    const ovr = e.riskOverrides[0] ?? null;
-    return {
-      enrollmentId: e.id,
-      studentId: e.student.id,
-      lrn: e.student.lrn,
-      firstName: e.student.firstName,
-      lastName: e.student.lastName,
-      sectionName: e.section.name,
-      gradeLevel: e.section.gradeLevel,
-      riskScore: latest?.score ?? null,
-      riskBand: ovr
-        ? (ovr.overrideBand as RiskBandLabel)
-        : latest
-          ? (latest.band as RiskBandLabel)
-          : null,
-      computedAt: latest?.computedAt.toISOString() ?? null,
-      overridden: ovr !== null,
-    };
-  });
-}
-
-// ─── Teacher class with risk scores ─────────────────────────────────────────
 
 export type TeacherStudentRisk = {
   enrollmentId: string;

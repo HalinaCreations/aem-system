@@ -9,6 +9,7 @@ import type {
   Attendance,
   BehavioralRecord,
   Grade,
+  ParticipationOutcome,
 } from "@prisma/client";
 
 // Helpers to build full Prisma-shaped rows with dummy values for fields the
@@ -69,6 +70,10 @@ const inputSchema = z.object({
   behavioralHigh: z.number().int().min(0).max(50),
   behavioralModerate: z.number().int().min(0).max(50),
   behavioralLow: z.number().int().min(0).max(50),
+  // Intervention history — counts of completed interventions by outcome.
+  priorImproving: z.number().int().min(0).max(20),
+  priorDeclining: z.number().int().min(0).max(20),
+  priorNeutral: z.number().int().min(0).max(20),
   // Profile
   spedStatus: z.enum(["NONE", "IEP", "ACCOMMODATIONS"]),
   learningModality: z.enum(["FACE_TO_FACE", "MODULAR", "ONLINE", "BLENDED"]),
@@ -113,6 +118,16 @@ export async function whatIfRiskAction(input: unknown): Promise<WhatIfResult> {
     grades: synthGrades,
     attendance: synthAttendance,
     behavioral: synthBehavioral,
+    interventionHistory: {
+      priorCompletedOutcomes: [
+        ...Array<ParticipationOutcome>(data.priorImproving).fill("IMPROVING"),
+        ...Array<ParticipationOutcome>(data.priorDeclining).fill("DECLINING"),
+        ...Array<ParticipationOutcome>(data.priorNeutral).fill("STABLE"),
+      ],
+      // Neutral by design — an active plan does not add risk. Not exposed as a
+      // control because a knob that never moves the score teaches the wrong thing.
+      hasActiveIntervention: false,
+    },
     spedStatus: data.spedStatus,
     learningModality: data.learningModality,
     weights,

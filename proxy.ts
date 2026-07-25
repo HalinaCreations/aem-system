@@ -2,7 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/auth";
 
 const PUBLIC_PATHS = new Set<string>(["/"]);
-const PUBLIC_PREFIXES = ["/api/auth", "/_next", "/favicon"];
+// `/api/cron` has no session by design — it is called by a scheduler. The
+// route handler authenticates with a shared secret and refuses to run when
+// that secret is unset, so letting it past the session redirect here does not
+// leave it open.
+const PUBLIC_PREFIXES = ["/api/auth", "/api/cron", "/_next", "/favicon"];
 
 const ROLE_PREFIXES: Record<string, string> = {
   "/admin": "ADMIN",

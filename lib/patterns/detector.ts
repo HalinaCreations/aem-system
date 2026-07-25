@@ -3,6 +3,7 @@
 
 import { prisma } from "@/lib/prisma";
 import type { ParticipationOutcome } from "@prisma/client";
+import { fetchInterventionHistory, EMPTY_INTERVENTION_HISTORY } from "@/lib/risk/intervention-history";
 import type { PatternRuleConfig } from "./rules";
 import {
   ruleAcademicDeclineCluster,
@@ -59,24 +60,12 @@ export async function detectStudentPatterns(
 
   // Cross-year intervention history per student — needed for RECOVERY_TRACKING
   // (hasActiveIntervention in the current SY) and CHRONIC_CONCERN
-  // (priorInterventionOutcomes across all years). Single bulk fetch, then
-  // group in memory to avoid N+1 queries inside the per-enrollment loop.
-  const studentIds = enrollments.map((e) => e.studentId);
-  const participations = await prisma.interventionParticipation.findMany({
-    where: { enrollment: { studentId: { in: studentIds } } },
-    select: {
-      outcome: true,
-      enrollment: { select: { studentId: true } },
-      intervention: { select: { status: true, schoolYearId: true } },
-    },
-  });
-  const partsByStudent = new Map<string, typeof participations>();
-  for (const p of participations) {
-    const sid = p.enrollment.studentId;
-    const arr = partsByStudent.get(sid);
-    if (arr) arr.push(p);
-    else partsByStudent.set(sid, [p]);
-  }
+  // (priorInterventionOutcomes across all years). Shared with the risk engine,
+  // which reads the same two facts from the same bulk fetch.
+  const historyByStudent = await fetchInterventionHistory(
+    enrollments.map((e) => e.studentId),
+    schoolYearId,
+  );
 
   const results: DetectedPattern[] = [];
 
@@ -111,13 +100,9 @@ export async function detectStudentPatterns(
 
     const currentBand = (e.riskAssessments[0]?.band ?? "LOW") as "LOW" | "MODERATE" | "HIGH";
 
-    const studentParts = partsByStudent.get(e.studentId) ?? [];
-    const hasActiveIntervention = studentParts.some(
-      (p) => p.intervention.status === "ACTIVE" && p.intervention.schoolYearId === schoolYearId,
-    );
-    const priorInterventionOutcomes = studentParts
-      .filter((p) => p.intervention.status === "COMPLETED")
-      .map((p) => mapOutcomeToRuleEnum(p.outcome));
+    const history = historyByStudent.get(e.studentId) ?? EMPTY_INTERVENTION_HISTORY;
+    const hasActiveIntervention = history.hasActiveIntervention;
+    const priorInterventionOutcomes = history.priorCompletedOutcomes.map(mapOutcomeToRuleEnum);
 
     const input = {
       enrollmentId: e.id,
