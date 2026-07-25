@@ -49,6 +49,12 @@ export const ADMIN_NAV: NavSection[] = [
     description:
       "Plain-language explanation of how the risk score is computed, what each pattern rule looks for, and what the system decides versus what you decide.",
   },
+  {
+    title: "Reports",
+    href: "/reports",
+    description:
+      "Download CSV extracts of the data behind your screens — risk rosters, intervention outcomes, attendance, and governance breakdowns.",
+  },
 ];
 
 export const ADMIN_METRICS = [

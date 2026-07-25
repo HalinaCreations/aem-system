@@ -1076,6 +1076,11 @@ Recorded so the research write-up can defend these as design positions rather th
 - **Parent participation, student-led helpdesk, LAC, teacher training, ICT support, CPD** (Figure 22) — organizational practices, not software surfaces. §16 already excludes the parent/student portal and automated parent notifications.
 - **Trained-ML predictive modeling** (Figure 15 *predictive insights*) — §16 excludes it. The rule-based engine is the deliberate choice that makes per-factor explainability possible at all; an ML model would forfeit the AI-literacy contribution the research argues for.
 - **Assessment calendar, digital learning resources, blended-learning delivery** (Figure 16) — LMS territory, outside a student-support platform.
+- **Learning competencies and completion of requirements** (Figure 14) — *added 2026-07-25.* These are DepEd LIS / report-card records: competency codes, mastery levels, and requirement checklists belong to the official grading system this platform reads *from*, not to a support-and-intervention layer. The system holds scores by subject, quarter, and assessment kind, which is what the risk engine needs. Duplicating the competency framework would create a second source of truth for grades — the exact thing §6.2 avoids by keeping one `Grade` model.
+- **Class participation and student engagement as captured fields** (Figure 14) — *added 2026-07-25.* Both are teacher judgements rather than events, and capturing them as a per-student rating would add a subjective field to the risk pipeline with no inter-rater reliability behind it. Engagement is instead *inferred* from recorded behaviour — the `DISENGAGEMENT_SIGNAL` rule combines tardiness, absence, and incident data precisely because those are observable. Teachers who want to record a judgement have the behavioral log and intervention observation notes.
+- **System evaluation, feedback mechanisms, and policy review** (Figure 22) — *added 2026-07-25.* These are research and governance *activities*, not software surfaces: evaluating whether the system helped is the thesis's own methodology, and school policy review happens in meetings. The platform's contribution is making the evidence reviewable — the audit log, override history, bias dashboard, and intervention outcome tracking are what such a review would read. Building an in-app "rate this system" form would produce data nobody has a plan to act on.
+
+*(The first three above were the undeclared gaps surfaced by the post-Phase-8 review. Recording them here converts an oversight into a stated boundary. Nothing was removed to do this — none of them had ever been built.)*
 
 ### Phase 8 Definition of Done
 
@@ -1108,6 +1113,59 @@ Recorded so the research write-up can defend these as design positions rather th
 - The `interventionHistory` weight is `0.05`, so the newly-wired dimension moves a total score by at most ~4 points. Correct and live, but whether 0.05 is the right weight is a policy question for the principal/admin before any demo.
 - Grade- and school-level pattern rules remain deferred (they need ≥2 full years).
 - AI Literacy Assistant remains cut (spec §15 cut order #1).
+
+---
+
+## Phase 9 — Scheduled Recompute & Reports ✅ *(complete 2026-07-25)*
+
+**Goal:** close the two remaining *buildable* gaps from the post-Phase-8 review. Everything else outstanding was either declared a non-goal (§8.4) or is blocked on rules that need more school years.
+
+### 9.1 Scheduled risk recompute *(✅)*
+
+Deferred since Phase 4 ("recompute trigger + 24h cache", "scheduled weekly recompute"). Phase 8 made it more urgent than it looked: notifications are emitted by the engine run, and the only trigger was the admin's "Run engine" button — so the spec §5 promise was live only as often as someone remembered to click.
+
+- [x] **Extracted `runRiskEngine`** into [lib/risk/run-engine.ts](../lib/risk/run-engine.ts). The orchestration (score → detect → recommend → notify → audit) had lived inside `computeRiskAction`, which needs a session and so could not be reused. The action is now 68 lines of auth, validation, and revalidation; the engine is one implementation with two callers, so a scheduled run and a manual run cannot drift.
+- [x] **Cron endpoint** at [app/api/cron/recompute/route.ts](../app/api/cron/recompute/route.ts). Accepts GET or POST (Vercel Cron issues GET; system cron usually POST). Authenticated by `CRON_SECRET` as a bearer token — **and it refuses to run when the secret is unset** rather than defaulting open, so a missing env var can never turn this into an unauthenticated "recompute everything" button.
+- [x] **Always targets the active year.** A schedule that silently recomputed a historical year would rewrite settled records.
+- [x] **Attributed to no user.** `AuditLog.userId` was already nullable, so an unattended run audits as `userId = null` with `trigger: "scheduled"` in metadata, rather than being blamed on whoever configured the schedule.
+- [x] `/api/cron` added to `PUBLIC_PREFIXES` in [proxy.ts](../proxy.ts) with a comment explaining why that is safe; `CRON_SECRET` documented in `.env.example` with a ready-to-paste crontab line.
+
+**Verified live, including the part that matters:**
+
+| Request | Result |
+|---|---|
+| no `Authorization` header | 401 |
+| wrong secret | 401 |
+| correct secret, wrong scheme (no `Bearer `) | 401 |
+| correct bearer token | 200 · `computed: 250` |
+
+Then the headline claim was proved rather than asserted: a `LOW` prior band was planted on a student who scores `MODERATE`, and an **unattended cron call** detected the crossing and emitted **6 notifications** — one per teacher of that section — with the audit row system-attributed. Planted row and test notifications were deleted afterwards.
+
+**Deliberately unchanged:** `seed-demo.ts` keeps its own bulk-insert engine loop. It uses batched writes for ~730 assessments across three years and should not notify — manufacturing an inbox while seeding would be wrong.
+
+### 9.2 Report generation *(✅)*
+
+Figure 20's *automated reports* / *easy report generation*. Before this, the only export in the system was the cohort-analysis CSV on one principal page.
+
+- [x] **Report registry** ([lib/reports/registry.ts](../lib/reports/registry.ts)) — each report declares the roles that may run it **and scopes its own rows to the caller**. Both matter: the role list decides whether the button appears, the generator decides what a teacher actually gets. A link is not a permission.
+- [x] Four reports: **risk roster** (counselor/principal/teacher), **intervention pipeline & outcomes** (counselor/principal), **attendance summary by section** (all four roles), **bias monitoring breakdown** (principal only).
+- [x] **Restricted content never enters an export.** Intervention rationale, counseling notes, and SEL narrative are absent by construction — a CSV leaves the access-controlled UI behind, so anything in it is effectively unprotected from that point on. Asserted in the verification script against real seeded rationale text.
+- [x] **Every export is audited** (`REPORT_EXPORTED`, new enum value + migration): who, which report, how many rows, which role.
+- [x] Shared `/reports` page outside the role prefixes (same reasoning as `/learn`), linked from all four role navs.
+
+**CSV correctness got real attention** ([lib/reports/csv.ts](../lib/reports/csv.ts)) because these files go to spreadsheets, not parsers:
+- RFC 4180 quoting — a counselor's note containing a comma must not shift every following column.
+- **Formula-injection defence:** cells beginning `=`, `+`, `-`, or `@` are prefixed with a quote. Exported rows contain user-typed names and notes, and a cell starting `=` is executable the moment someone opens it in Excel.
+- **UTF-8 BOM** on the response, so a roster with `ñ` or `é` opens correctly rather than as mojibake — this is a Philippine student roster.
+
+**Verified:** [scripts/verify-phase-9.ts](../scripts/verify-phase-9.ts) — **33 assertions** covering CSV escaping and injection defence, filename shape, role gating per report, row-level scoping (teacher 5 rows vs counselor 250, every teacher row inside a section they teach, **a teacher with no assignments gets zero rows rather than the whole school**), restricted-content absence, and every report executing with rows matching header width. Plus a live 4×4 role × report matrix over HTTP: exactly the intended 200s and 403s, 307 unauthenticated, 404 unknown report, and an audit trail showing teacher=5 / counselor=250 for the same report.
+
+### Phase 9 retrospective
+
+- **The stale-server trap cost ten minutes and was worth recording.** The report matrix first came back as `500`s for every *allowed* report while the `403`s were correct. Cause: a dev server left running from the previous phase's smoke test held a Prisma client predating the `REPORT_EXPORTED` migration, so the role check (pure JS) passed and the audit write then failed. `npm run dev` had silently failed to bind with `EADDRINUSE` and I was testing the old process. **Check what is actually listening before believing a smoke result** — and prefer failing loudly over reusing a port.
+- **Extracting for testability paid off twice.** `buildBandIncreaseNotifications` was pulled out of the action in Phase 8 to make it assertable; `runRiskEngine` was pulled out in Phase 9 to make it *reusable*. The second refactor was trivial because the first had already separated the pure part.
+- **Two features, one dependency.** Scheduling was worth building on its own, but its real value was fixing something Phase 8 shipped half-finished: notifications that only fired when a human pressed a button. Worth noticing that a "new feature" was really the completion of an old one.
+- **Exports are a governance surface, not a convenience.** The interesting decisions in 9.2 were all about what *must not* be in the file, and about formula injection — a risk that only exists because the output is opened by spreadsheet software rather than read by code.
 
 ---
 
