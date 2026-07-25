@@ -2,7 +2,7 @@
 // Shows the score, band, and factor breakdown in human-readable form.
 // Pure UI — accepts pre-fetched data; no I/O.
 
-import type { RiskFactors, RiskBandLabel } from "@/lib/risk/types";
+import type { RiskFactors, RiskBandLabel, InterventionHistoryBreakdown } from "@/lib/risk/types";
 
 interface ExplainabilityPanelProps {
   score: number;
@@ -38,6 +38,10 @@ function ScoreBar({ value, max = 100 }: { value: number; max?: number }) {
 export default function ExplainabilityPanel({ score, band, factors, compact = false }: ExplainabilityPanelProps) {
   const style = BAND_STYLES[band];
   const { breakdown } = factors;
+  // `factors` is JSON read back from RiskAssessment. Rows persisted before the
+  // intervention-history dimension shipped have no such key, so this stays
+  // optional until every year has been recomputed.
+  const interventionHistory: InterventionHistoryBreakdown | undefined = breakdown.interventionHistory;
 
   const dimensionKeys: Array<keyof Omit<RiskFactors, "breakdown">> = [
     "academic",
@@ -130,6 +134,24 @@ export default function ExplainabilityPanel({ score, band, factors, compact = fa
                 )}
                 {breakdown.behavioral.lowCount > 0 && (
                   <span className="ml-1 rounded bg-slate-100 px-1 text-slate-700 font-semibold">{breakdown.behavioral.lowCount} LOW</span>
+                )}
+              </p>
+            </div>
+          )}
+          {/* Intervention history detail */}
+          {interventionHistory && interventionHistory.priorCompletedCount > 0 && (
+            <div className="rounded-lg bg-white/60 p-3 space-y-1">
+              <p className="text-xs font-semibold text-slate-700">Intervention history detail</p>
+              <p className="text-xs text-slate-600">
+                {interventionHistory.priorCompletedCount} completed plan(s):
+                {interventionHistory.improvingCount > 0 && (
+                  <span className="ml-1 rounded bg-emerald-100 px-1 text-emerald-700 font-semibold">{interventionHistory.improvingCount} improving</span>
+                )}
+                {interventionHistory.decliningCount > 0 && (
+                  <span className="ml-1 rounded bg-rose-100 px-1 text-rose-700 font-semibold">{interventionHistory.decliningCount} declining</span>
+                )}
+                {interventionHistory.hasActiveIntervention && (
+                  <> · <span className="text-slate-500">currently under an active plan (does not add risk)</span></>
                 )}
               </p>
             </div>

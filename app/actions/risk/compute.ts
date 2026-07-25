@@ -9,6 +9,7 @@ import { requireRole } from "@/lib/session";
 import { logAudit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { computeRiskScore } from "@/lib/risk/engine";
+import { fetchInterventionHistory, EMPTY_INTERVENTION_HISTORY } from "@/lib/risk/intervention-history";
 import type { RiskWeights, RiskThresholds } from "@/lib/risk/types";
 import { detectStudentPatterns, detectSectionPatterns } from "@/lib/patterns/detector";
 import { generateRecommendation } from "@/lib/patterns/recommendations";
@@ -54,12 +55,21 @@ export async function computeRiskAction(formData: FormData): Promise<ComputeResu
     },
   });
 
+  // Cross-year intervention history for the intervention-history sub-score.
+  // One bulk fetch for the whole batch, read per-enrollment inside the loop.
+  const historyByStudent = await fetchInterventionHistory(
+    enrollments.map((e) => e.studentId),
+    schoolYearId,
+  );
+
   let computed = 0;
   for (const enrollment of enrollments) {
     const result = computeRiskScore({
       grades: enrollment.grades,
       attendance: enrollment.attendance,
       behavioral: enrollment.behavioralRecords,
+      interventionHistory:
+        historyByStudent.get(enrollment.studentId) ?? EMPTY_INTERVENTION_HISTORY,
       spedStatus: enrollment.student.spedStatus,
       learningModality: enrollment.learningModality,
       weights,

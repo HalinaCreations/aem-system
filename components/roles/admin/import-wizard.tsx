@@ -5,6 +5,7 @@ import { previewRosterAction, commitRosterAction, type RosterPreview, type Roste
 import { previewGradesAction, commitGradesAction, type GradesPreview, type GradesCommit } from "@/app/actions/import/grades";
 import { previewAttendanceAction, commitAttendanceAction, type AttendancePreview, type AttendanceCommit } from "@/app/actions/import/attendance";
 import { previewBehavioralAction, commitBehavioralAction, type BehavioralPreview, type BehavioralCommit } from "@/app/actions/import/behavioral";
+import { previewInterventionsAction, commitInterventionsAction, type InterventionsPreview, type InterventionsCommit } from "@/app/actions/import/interventions";
 
 type Year = { id: string; label: string; isActive: boolean };
 
@@ -13,7 +14,7 @@ type Props = {
   defaultYearId: string | null;
 };
 
-type Step = 1 | 2 | 3 | 4 | 5;
+type Step = 1 | 2 | 3 | 4 | 5 | 6;
 
 const STEP_LABELS: Record<Step, string> = {
   1: "Select school year",
@@ -21,6 +22,7 @@ const STEP_LABELS: Record<Step, string> = {
   3: "Grades CSV",
   4: "Attendance CSV",
   5: "Behavioral CSV (optional)",
+  6: "Interventions CSV (optional)",
 };
 
 export default function ImportWizard({ years, defaultYearId }: Props) {
@@ -35,15 +37,15 @@ export default function ImportWizard({ years, defaultYearId }: Props) {
       <section className="rounded-3xl border border-slate-200 bg-white p-6 md:p-8">
         <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Import Wizard</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Bulk-load student rosters, grades, attendance, and behavioral records into the selected school year.
+          Bulk-load student rosters, grades, attendance, behavioral records, and historical interventions into the selected school year.
           Each step previews the first 20 rows and reports validation errors with row numbers before committing.
           Commits run as a single transaction — all-or-nothing.
         </p>
       </section>
 
       {/* Stepper */}
-      <ol className="grid gap-3 md:grid-cols-5">
-        {[1, 2, 3, 4, 5].map((id) => {
+      <ol className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
+        {[1, 2, 3, 4, 5, 6].map((id) => {
           const s = id as Step;
           const active = s === step;
           const enabled = s === 1 || dataStepsEnabled;
@@ -246,6 +248,56 @@ export default function ImportWizard({ years, defaultYearId }: Props) {
               )}
             />
           )}
+
+          {step === 6 && (
+            <CsvStep<InterventionsRowPreview, InterventionsCommit>
+              title="Historical interventions CSV (optional)"
+              schoolYearId={selectedYearId}
+              schoolYearLabel={selectedYear.label}
+              onChangeYear={() => setStep(1)}
+              requiredColumns={["lrn", "type", "scope", "startDate", "endDate", "outcome"]}
+              optionalColumns={[]}
+              hints={
+                <>
+                  <p>
+                    <code className="font-mono">scope</code>: <code>STUDENT</code>/<code>SECTION</code>/<code>GRADE</code>/<code>SCHOOL</code>.
+                    Rows are keyed by LRN, so a section-, grade-, or school-wide plan is written as one row per
+                    participating student — rows sharing scope, type, and both dates are folded into a single plan.
+                  </p>
+                  <p>
+                    <code className="font-mono">outcome</code>: <code>IMPROVING</code>/<code>STABLE</code>/<code>DECLINING</code>/<code>COMPLETED</code>, recorded per participant.
+                  </p>
+                  <p>
+                    Imported plans land as <code>COMPLETED</code> — they are finished work, not live cases — and are
+                    owned by you as the importing admin. They feed the intervention-history dimension of the risk score.
+                  </p>
+                </>
+              }
+              sampleFileName="interventions-sample.csv"
+              sampleRows={[
+                { lrn: "100000000001", type: "ACADEMIC_SUPPORT", scope: "STUDENT", startDate: "2025-08-04", endDate: "2025-10-10", outcome: "IMPROVING" },
+                { lrn: "100000000001", type: "ATTENDANCE_PROGRAM", scope: "SECTION", startDate: "2025-09-01", endDate: "2025-11-28", outcome: "STABLE" },
+              ]}
+              previewAction={previewInterventionsAction}
+              commitAction={commitInterventionsAction}
+              previewHeaders={["Row", "LRN", "Scope", "Type", "Start", "End", "Outcome"]}
+              renderRow={(r) => [
+                <td key="row" className="px-2 py-2 text-slate-500">{r.row}</td>,
+                <td key="lrn" className="px-2 py-2 font-mono">{r.data.lrn}</td>,
+                <td key="scope" className="px-2 py-2">{r.data.scope}</td>,
+                <td key="type" className="px-2 py-2">{r.data.type}</td>,
+                <td key="start" className="px-2 py-2">{r.data.startDate.toISOString().slice(0, 10)}</td>,
+                <td key="end" className="px-2 py-2">{r.data.endDate.toISOString().slice(0, 10)}</td>,
+                <td key="outcome" className="px-2 py-2">{r.data.outcome}</td>,
+              ]}
+              commitButtonLabel={(n, label) => `Commit ${n} participation row(s) to ${label}`}
+              renderSuccess={(c) => (
+                <p className="mt-2 text-xs">
+                  {c.plansCreated} intervention plan(s) created with {c.participantsCreated} participant record(s).
+                </p>
+              )}
+            />
+          )}
         </>
       )}
     </div>
@@ -321,6 +373,7 @@ type RosterRowPreview = NonNullable<Extract<RosterPreview, { ok: true }>["previe
 type GradesRowPreview = NonNullable<Extract<GradesPreview, { ok: true }>["previewRows"][number]>["data"];
 type AttendanceRowPreview = NonNullable<Extract<AttendancePreview, { ok: true }>["previewRows"][number]>["data"];
 type BehavioralRowPreview = NonNullable<Extract<BehavioralPreview, { ok: true }>["previewRows"][number]>["data"];
+type InterventionsRowPreview = NonNullable<Extract<InterventionsPreview, { ok: true }>["previewRows"][number]>["data"];
 
 function CsvStep<T, C extends CommitShape>({
   title,

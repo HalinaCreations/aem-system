@@ -31,6 +31,7 @@ import {
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 import { computeRiskScore } from "../lib/risk/engine";
+import { fetchInterventionHistory, EMPTY_INTERVENTION_HISTORY } from "../lib/risk/intervention-history";
 import { detectStudentPatterns, detectSectionPatterns } from "../lib/patterns/detector";
 import { generateRecommendation } from "../lib/patterns/recommendations";
 import type { PatternRuleConfig, PatternRuleId } from "../lib/patterns/rules";
@@ -1145,12 +1146,18 @@ async function runEngineForAllYears(yearMap: Map<string, { id: string }>) {
       },
     });
 
+    const historyByStudent = await fetchInterventionHistory(
+      enrollments.map((e) => e.studentId),
+      syId,
+    );
+
     const assessmentRows: Prisma.RiskAssessmentCreateManyInput[] = [];
     for (const e of enrollments) {
       const result = computeRiskScore({
         grades: e.grades,
         attendance: e.attendance,
         behavioral: e.behavioralRecords,
+        interventionHistory: historyByStudent.get(e.studentId) ?? EMPTY_INTERVENTION_HISTORY,
         spedStatus: e.student.spedStatus,
         learningModality: e.learningModality,
         weights,
