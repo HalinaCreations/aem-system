@@ -11,6 +11,12 @@ import { logAudit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { computeRiskScore } from "@/lib/risk/engine";
 import { fetchInterventionHistory, EMPTY_INTERVENTION_HISTORY } from "@/lib/risk/intervention-history";
+import {
+  buildBandIncreaseNotifications,
+  emitNotifications,
+  teachersForSection,
+  type BandCrossing,
+} from "@/lib/notifications";
 import type { RiskWeights, RiskThresholds } from "@/lib/risk/types";
 import { detectStudentPatterns, detectSectionPatterns } from "@/lib/patterns/detector";
 import { generateRecommendation } from "@/lib/patterns/recommendations";
@@ -22,7 +28,7 @@ const ComputeInput = z.object({
 });
 
 type ComputeResult =
-  | { ok: true; computed: number; patternsFound: number; recommendationsCreated: number }
+  | { ok: true; computed: number; patternsFound: number; recommendationsCreated: number; notificationsSent: number }
   | { ok: false; error: string };
 
 export async function computeRiskAction(formData: FormData): Promise<ComputeResult> {
@@ -49,10 +55,12 @@ export async function computeRiskAction(formData: FormData): Promise<ComputeResu
       ...(enrollmentId ? { id: enrollmentId } : {}),
     },
     include: {
-      student: { select: { spedStatus: true } },
+      student: { select: { spedStatus: true, firstName: true, lastName: true } },
       grades: true,
       attendance: true,
       behavioralRecords: true,
+      // Band before this run, so we can tell who crossed upward (spec §5).
+      riskAssessments: { orderBy: { computedAt: "desc" }, take: 1, select: { band: true } },
     },
   });
 
@@ -62,6 +70,13 @@ export async function computeRiskAction(formData: FormData): Promise<ComputeResu
     enrollments.map((e) => e.studentId),
     schoolYearId,
   );
+
+  // Section → teacher fan-out, resolved once rather than per crossing.
+  const teachersBySection = new Map<string, string[]>();
+  for (const sectionId of new Set(enrollments.map((e) => e.sectionId))) {
+    teachersBySection.set(sectionId, await teachersForSection(sectionId, schoolYearId));
+  }
+  const crossings: BandCrossing[] = [];
 
   let computed = 0;
   for (const enrollment of enrollments) {
@@ -89,7 +104,20 @@ export async function computeRiskAction(formData: FormData): Promise<ComputeResu
       },
     });
     computed++;
+
+    crossings.push({
+      studentName: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
+      sectionId: enrollment.sectionId,
+      previousBand: enrollment.riskAssessments[0]?.band ?? null,
+      nextBand: result.band,
+    });
   }
+
+  // Emitted outside the scoring loop so one bad insert cannot leave a partial
+  // set of scores behind, and after scoring so the linked page is already true.
+  const notificationsSent = await emitNotifications(
+    buildBandIncreaseNotifications(crossings, teachersBySection, schoolYearId),
+  );
 
   // Pattern detection — runs after all risk scores are persisted so band data is fresh.
   let patternsFound = 0;
@@ -172,10 +200,10 @@ export async function computeRiskAction(formData: FormData): Promise<ComputeResu
     action: "RISK_RECOMPUTED",
     userId: session.user.id,
     resourceType: "RiskAssessment",
-    metadata: { schoolYearId, enrollmentId: enrollmentId ?? "all", computed, patternsFound, recommendationsCreated },
+    metadata: { schoolYearId, enrollmentId: enrollmentId ?? "all", computed, patternsFound, recommendationsCreated, notificationsSent },
   });
 
-  return { ok: true, computed, patternsFound, recommendationsCreated };
+  return { ok: true, computed, patternsFound, recommendationsCreated, notificationsSent };
 }
 
 // Server action to dismiss a recommendation draft.

@@ -178,6 +178,11 @@ enum InterventionStatus {
   CANCELLED
 }
 
+/// Spec §6.6 names nine plan types; the first eight below predate that
+/// alignment and are kept because historical rows reference them. The six
+/// added in Phase 8.2.1 close the gap — notably PARENT_CONFERENCE and
+/// PEER_SUPPORT, which §10 already expects the recommendation engine to be
+/// able to emit.
 enum InterventionType {
   ACADEMIC_SUPPORT
   COUNSELING_SESSION
@@ -187,6 +192,12 @@ enum InterventionType {
   SECTION_INTERVENTION
   SUBJECT_REMEDIATION
   ATTENDANCE_PROGRAM
+  TUTORING
+  PEER_SUPPORT
+  PARENT_CONFERENCE
+  EXTERNAL_REFERRAL
+  SEL_PROGRAM
+  STUDY_SKILLS_WORKSHOP
 }
 
 enum InterventionNoteType {
@@ -211,6 +222,13 @@ enum SELLevel {
   STABLE
   AT_RISK
   CRITICAL
+}
+
+enum NotificationKind {
+  RISK_BAND_INCREASED
+  REFERRAL_ACCEPTED
+  REFERRAL_DECLINED
+  APPROVAL_REQUESTED
 }
 
 enum ParticipationOutcome {
@@ -239,6 +257,7 @@ model User {
   recordedBehavioral    BehavioralRecord[]
   counselingNotes       CounselingNote[]
   selAssessments        SELAssessment[]
+  notifications         Notification[]
   interventionsOwned    Intervention[]
   interventionNotes     InterventionNote[]
   interventionRevisions InterventionRevision[]
@@ -755,6 +774,28 @@ model InterventionRevision {
 // Cache Gemini responses keyed by a SHA-256 hash of the prompt + model so we
 // don't re-spend tokens on identical inputs. Rows are immutable; invalidation
 // = recompute the hash with a new prompt template or model version.
+/// In-app notification (spec §5 — "Receive in-app notifications when a student
+/// in their class crosses into a higher risk band"). Deliberately carries no
+/// sensitive content: `title`/`body` name the student and the event, never a
+/// rationale, counseling note, or SEL detail. Recipients still have to open the
+/// linked page, where the normal query-layer access rules apply.
+model Notification {
+  id           String           @id @default(cuid())
+  userId       String
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind         NotificationKind
+  title        String
+  body         String
+  /// In-app destination. Nullable because not every event has a useful page.
+  linkHref     String?
+  schoolYearId String?
+  readAt       DateTime?
+  createdAt    DateTime         @default(now())
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+}
+
 model AICache {
   id          String   @id @default(cuid())
   contentHash String   @unique

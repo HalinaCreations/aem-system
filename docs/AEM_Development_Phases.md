@@ -1003,13 +1003,40 @@ The principal line is the same one already drawn around counseling note bodies (
 
 **Not done in this slice (deliberate):** SEL does not feed the risk engine. Spec §7 fixes five weighted dimensions and every recorded `AlgorithmConfig` version assumes that shape — adding a sixth needs its own decision, not a side effect of this slice.
 
-### 8.2 Intervention types + notifications *(Slice B — cheapest coverage per line)*
+### 8.2 Intervention types + notifications *(Slice B — ✅ complete 2026-07-25)*
 
-- [ ] **8.2.1 Align `InterventionType` to spec §6.6.** The enum has 8 values; the spec names 9 partly-different ones. Additive migration for `TUTORING`, `PEER_SUPPORT`, `PARENT_CONFERENCE`, `EXTERNAL_REFERRAL`, `SEL_PROGRAM`, `STUDY_SKILLS_WORKSHOP` — keep the existing 8 so historical rows stay valid. Update builder / edit / referral dropdowns and the ruleId→type mapping in [lib/patterns/recommendations.ts](../lib/patterns/recommendations.ts), which per §10 should be able to emit *parent conference*, *study skills workshop*, and *peer mentorship* but currently cannot. Closes Figure 16's *parent engagement* and Figure 22's *student mentoring*.
-- [ ] **8.2.2 In-app notifications.** Spec §5 (Teacher) promises "in-app notifications when a student in their class crosses into a higher risk band." Zero notification code exists; it is item 6 on the 7.5 human-verification handover list and Figure 20's *early warning alerts*.
+- [x] **8.2.1 Align `InterventionType` to spec §6.6.** The enum has 8 values; the spec names 9 partly-different ones. Additive migration for `TUTORING`, `PEER_SUPPORT`, `PARENT_CONFERENCE`, `EXTERNAL_REFERRAL`, `SEL_PROGRAM`, `STUDY_SKILLS_WORKSHOP` — keep the existing 8 so historical rows stay valid. Update builder / edit / referral dropdowns and the ruleId→type mapping in [lib/patterns/recommendations.ts](../lib/patterns/recommendations.ts), which per §10 should be able to emit *parent conference*, *study skills workshop*, and *peer mentorship* but currently cannot. Closes Figure 16's *parent engagement* and Figure 22's *student mentoring*.
+- [x] **8.2.2 In-app notifications.** Spec §5 (Teacher) promises "in-app notifications when a student in their class crosses into a higher risk band." Zero notification code exists; it is item 6 on the 7.5 human-verification handover list and Figure 20's *early warning alerts*.
   - `Notification` model (userId, kind, title, body, linkHref, readAt, schoolYearId).
   - Emit on band transition during an engine run — compare new band against the prior `RiskAssessment` for that enrollment, fan out to teachers assigned to the section. Also emit on referral accept/decline (the referring teacher currently has to poll `/teacher/refer`) and on approval-queue arrival for the principal.
   - Bell + unread count in [components/shell/role-shell.tsx](../components/shell/role-shell.tsx) so all four roles inherit it from one place, plus a notifications list route.
+
+#### Slice B — what shipped (2026-07-25)
+
+**Enum aligned, and the duplication that caused the drift removed.** The type list was copy-pasted across **seven** call sites (builder form, edit form, referral form, three server-action Zod enums, import validator). Adding six values to seven lists is exactly when a shared constant earns its keep, so the vocabulary now lives in [lib/intervention/types.ts](../lib/intervention/types.ts) with `INTERVENTION_TYPES` + `INTERVENTION_TYPE_LABEL`, and every site imports it. Labels are proper prose now ("Study skills workshop") rather than four different ad-hoc `replace(/_/g, " ")` variants. Migration is additive — all four persisted types still resolve.
+
+**Correction to this section's own earlier claim.** The 8.2.1 bullet above says the recommendation mapping "should be able to emit parent conference, study skills workshop, and peer mentorship but currently cannot." Having read §10 against the implemented rules, that overstated it: those §10 examples attach to *Transition Difficulty*, a grade-level rule still deferred since Phase 4, and to SEL-driven risk, which no rule consumes. The mappings were therefore **left unchanged** — inventing clinical routing (e.g. escalating `DISENGAGEMENT_SIGNAL` from a counseling check-in to a parent conference) to satisfy a checkbox would be worse than the gap. The new types are available for **human selection** in the builder, edit, and referral forms today; automated emission waits on the rules that would justify it.
+
+**Notifications.** New `Notification` model + `NotificationKind`, with three emitters:
+
+| Trigger | Recipients | Why it was needed |
+|---|---|---|
+| Risk band increases during a recompute | every teacher assigned to the student's section (advisers included — an adviser is just an assignment row) | the spec §5 promise, unimplemented since Phase 1 |
+| Referral accepted / declined | the referring teacher | they previously had to revisit `/teacher/refer` and re-read the list to learn the outcome |
+| Broader-scope plan enters PENDING_APPROVAL | every active principal | plans otherwise surfaced only if someone opened the approval queue |
+
+**Payloads are deliberately dumb.** A notification carries a title, a one-line body, and a link — never rationale, counseling content, or SEL detail. The recipient follows the link and the normal query-layer rules apply there. This means a notification can never become a side channel around RBAC, which matters because the fan-out is the widest audience in the system.
+
+**Only an *increase* notifies.** Improvement, an unchanged band, and a first-ever score all stay silent — the last one because a student's first score has no band to have crossed, and treating it as a crossing would fire a notification for all ~250 enrollments on the first engine run of a year.
+
+**Testability refactor mid-slice.** The fan-out started as straight-line code inside `computeRiskAction`, which needs a session and so could not be reached from a script. Extracted to a pure `buildBandIncreaseNotifications(crossings, teachersBySection, schoolYearId)`; the action now only supplies data and persists the result. Six assertions now cover the rule directly, including the orphan-section case.
+
+**Known behaviour, deliberate:** emission lives in the server action, so `scripts/run-risk-engine.ts` and `seed-demo.ts` recompute risk **without** notifying. That is wanted — bulk seeding 250 enrollments should not manufacture an inbox — but it does mean the admin "Run engine" button is the only path that notifies. Noted here so it is not mistaken for a bug later.
+
+**Verified:**
+- [scripts/verify-notifications.ts](../scripts/verify-notifications.ts) — **33 assertions**: enum shape read straight from `pg_enum` (14 values, all six new ones present, shared constant matches the DB exactly, all persisted types still valid), band-transition truth table including the improvement and first-score cases, fan-out composition, recipient dedup, emission, per-user isolation, and mark-read scoping (a different user's `updateMany` affects **0 rows**). Cleans up its own test rows.
+- Route × role smoke: all four `/{role}/notifications` return 200 for their own role, teacher → `/counselor/notifications` returns 307. Bell renders in the shared shell.
+- `npx tsc --noEmit` clean · `npm run lint` clean · `npm run build` clean (41 routes) · RBAC / SEL / engine / import suites all still pass.
 
 ### 8.3 AI literacy surfaces *(Slice C — closes Figure 22's in-app half)*
 

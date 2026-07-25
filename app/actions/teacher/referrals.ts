@@ -7,17 +7,9 @@ import { requireRole } from "@/lib/session";
 import { getActiveSchoolYear } from "@/lib/active-year";
 import { logAudit } from "@/lib/audit";
 import { canTeacherReferStudent } from "@/lib/teacher/queries";
+import { INTERVENTION_TYPES } from "@/lib/intervention/types";
 
-const TYPE = z.enum([
-  "ACADEMIC_SUPPORT",
-  "COUNSELING_SESSION",
-  "IMMEDIATE_COUNSELING",
-  "POSITIVE_REINFORCEMENT",
-  "CASE_REVIEW",
-  "SECTION_INTERVENTION",
-  "SUBJECT_REMEDIATION",
-  "ATTENDANCE_PROGRAM",
-]);
+const TYPE = z.enum(INTERVENTION_TYPES);
 
 const inputSchema = z.object({
   studentId: z.string().min(1, "Student is required."),
