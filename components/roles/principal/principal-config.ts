@@ -2,7 +2,7 @@ import type { NavSection, ThemeName } from "@/components/shell/role-shell";
 
 export const PRINCIPAL_BADGE = "Principal workspace";
 export const PRINCIPAL_TITLE = "Oversight and decision dashboard";
-export const PRINCIPAL_THEME: ThemeName = "rose";
+export const PRINCIPAL_THEME: ThemeName = "emerald";
 
 export const PRINCIPAL_NAV: NavSection[] = [
   {

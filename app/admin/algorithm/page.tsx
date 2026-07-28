@@ -3,6 +3,7 @@ import { getActiveSchoolYear } from "@/lib/active-year";
 import { prisma } from "@/lib/prisma";
 import AlgorithmConfigForm from "@/components/roles/admin/algorithm-config-form";
 import RunRiskEngineButton from "@/components/roles/admin/run-risk-engine-button";
+import PageHeader from "@/components/shell/page-header";
 
 export type AlgorithmConfigRow = {
   id: string;
@@ -29,14 +30,12 @@ export default async function AdminAlgorithmPage() {
   const active = configs.find((c) => c.isActive) ?? configs[0];
 
   return (
-    <div className="flex flex-col gap-6">
-      <header>
-        <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Algorithm Configuration</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Manage risk scoring weights, band thresholds, and pattern detection rules.
-          Each save creates an immutable versioned record.
-        </p>
-      </header>
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        label="Algorithm Tuning"
+        title="Algorithm Configuration"
+        description="Manage risk scoring weights, band thresholds, and pattern detection rules. Each save creates an immutable versioned record."
+      />
 
       {/* Run engine button */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5">

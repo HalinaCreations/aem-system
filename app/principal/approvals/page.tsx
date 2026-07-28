@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/session";
 import { getActiveSchoolYear } from "@/lib/active-year";
 import { getPendingApprovals } from "@/lib/intervention/queries";
 import ApprovalActions from "@/components/principal/approval-actions";
+import PageHeader from "@/components/shell/page-header";
 
 const SCOPE_LABEL: Record<string, string> = {
   STUDENT: "Individual",
@@ -25,13 +26,12 @@ export default async function PrincipalApprovalsPage() {
   const pending = await getPendingApprovals(sy.id);
 
   return (
-    <div className="flex flex-col gap-6">
-      <header>
-        <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Approval queue</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          {pending.length} broader-scope intervention{pending.length === 1 ? "" : "s"} awaiting your approval in {sy.label}. Individual-scope plans activate without approval.
-        </p>
-      </header>
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        label="Governance Queue"
+        title="Approval queue"
+        description={`${pending.length} broader-scope intervention${pending.length === 1 ? "" : "s"} awaiting your approval in ${sy.label}. Individual-scope plans activate without approval.`}
+      />
 
       {pending.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm text-slate-400">

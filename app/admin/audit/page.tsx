@@ -2,6 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import type { AuditAction, Prisma } from "@prisma/client";
 import { paginate, parsePageParam } from "@/lib/pagination";
+import PageHeader from "@/components/shell/page-header";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 const AUDIT_ACTIONS: AuditAction[] = [
   "LOGIN",
@@ -103,55 +105,65 @@ export default async function AdminAuditPage({
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 md:p-8">
-        <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Audit log</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Append-only record of authentication events, data writes, and sensitive reads.
-          Filters narrow the view; the underlying data is never modified.
-        </p>
-      </section>
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        label="Privacy & Security"
+        title="Audit log"
+        description="Append-only record of authentication events, data writes, and sensitive reads. Filters narrow the view; the underlying data is never modified."
+      />
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6">
         <form method="GET" className="grid gap-3 md:grid-cols-5">
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">Action</span>
-            <select
+            <Select
               name="action"
               defaultValue={action ?? ""}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
             >
-              <option value="">Any</option>
-              {AUDIT_ACTIONS.map((a) => (
-                <option key={a} value={a}>{a}</option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="Any" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Any</SelectItem>
+                {AUDIT_ACTIONS.map((a) => (
+                  <SelectItem key={a} value={a}>{a}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">Resource type</span>
-            <select
+            <Select
               name="resourceType"
               defaultValue={resourceType ?? ""}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
             >
-              <option value="">Any</option>
-              {resourceTypes.map((r) => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="Any" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Any</SelectItem>
+                {resourceTypes.map((r) => (
+                  <SelectItem key={r} value={r}>{r}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">User</span>
-            <select
+            <Select
               name="userId"
               defaultValue={userId ?? ""}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
             >
-              <option value="">Any</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="Any" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Any</SelectItem>
+                {users.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>{u.name} ({u.role})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">From</span>

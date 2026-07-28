@@ -2,10 +2,8 @@
 
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
-import {
-  addAssignmentAction,
-  removeAssignmentAction,
-} from "@/app/actions/admin/users";
+import { addAssignmentAction, removeAssignmentAction } from "@/app/actions/admin/users";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import type { Role, UserStatus } from "@prisma/client";
 
 type YearOption = {
@@ -114,59 +112,72 @@ export default function UserAssignmentsPanel({ user, years, assignments }: Props
                 <span className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
                   School year
                 </span>
-                <select
+                <Select
                   value={yearId}
-                  onChange={(e) => {
-                    setYearId(e.target.value);
+                  onValueChange={(val) => {
+                    setYearId(val);
                     setSectionId("");
                     setSubjectId("");
                   }}
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                 >
-                  {years.map((y) => (
-                    <option key={y.id} value={y.id}>
-                      {y.label}
-                      {y.isActive ? " · current" : ""}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {years.map((y) => (
+                      <SelectItem key={y.id} value={y.id}>
+                        {y.label}
+                        {y.isActive ? " (Active)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </label>
 
               <label className="flex flex-col gap-1">
                 <span className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
                   Section
                 </span>
-                <select
+                <Select
                   value={sectionId}
-                  onChange={(e) => setSectionId(e.target.value)}
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                  required
+                  onValueChange={(val) => setSectionId(val)}
+                  name="sectionId"
                 >
-                  <option value="">— pick a section —</option>
-                  {year?.sections.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.gradeLevel} · {s.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="— pick a section —" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">— pick a section —</SelectItem>
+                    {year?.sections.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.gradeLevel} &middot; {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </label>
 
               <label className="flex flex-col gap-1">
                 <span className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
                   Subject (optional)
                 </span>
-                <select
+                <Select
                   value={subjectId}
-                  onChange={(e) => setSubjectId(e.target.value)}
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                  onValueChange={(val) => setSubjectId(val)}
+                  name="subjectId"
                 >
-                  <option value="">— adviser only —</option>
-                  {year?.subjects.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.code} — {s.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="— adviser only —" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">— adviser only —</SelectItem>
+                    {year?.subjects.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.code} &mdash; {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </label>
 
               <label className="flex items-end gap-2 pb-1">

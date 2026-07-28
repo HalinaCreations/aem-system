@@ -15,16 +15,11 @@
 //     ]}
 //   />
 
+"use client";
+
 import Link from "next/link";
-
-export type FilterOption = { value: string; label: string };
-
-export type FilterSpec = {
-  name: string; // query-string key
-  label: string; // human label
-  value: string | null; // currently selected value (null = none)
-  options: FilterOption[];
-};
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import type { FilterSpec } from "@/lib/toolbar-utils";
 
 type Props = {
   basePath: string;
@@ -79,16 +74,20 @@ export function ListToolbar({
         {filters.map((f) => (
           <label key={f.name} className="flex flex-col gap-1">
             <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">{f.label}</span>
-            <select
+            <Select
               name={f.name}
               defaultValue={f.value ?? ""}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
             >
-              <option value="">All</option>
-              {f.options.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+              <SelectTrigger className="min-w-[200px]">
+                <SelectValue placeholder={f.placeholder ?? "All"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">{f.placeholder ?? "All"}</SelectItem>
+                {f.options.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
         ))}
         <div className="flex items-center gap-2">
@@ -158,18 +157,4 @@ function buildHref(
   return qs ? `${basePath}?${qs}` : basePath;
 }
 
-// Helper for the pagination footer — turns current search + filters into a
-// `forwardParams` object that the PaginationBar can preserve when generating
-// page links.
-export function toForwardParams(
-  searchName: string,
-  searchValue: string | null,
-  filters: FilterSpec[],
-): Record<string, string | undefined> {
-  const out: Record<string, string | undefined> = {};
-  if (searchValue) out[searchName] = searchValue;
-  for (const f of filters) {
-    if (f.value) out[f.name] = f.value;
-  }
-  return out;
-}
+

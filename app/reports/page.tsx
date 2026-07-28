@@ -1,6 +1,7 @@
 import { requireSession } from "@/lib/session";
 import { getActiveSchoolYear } from "@/lib/active-year";
 import { reportsForRole } from "@/lib/reports/registry";
+import PageHeader from "@/components/shell/page-header";
 
 export default async function ReportsPage() {
   const session = await requireSession();
@@ -8,20 +9,25 @@ export default async function ReportsPage() {
   const reports = reportsForRole(session.user.role);
 
   return (
-    <div className="flex flex-col gap-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Reports</h1>
-        <p className="mt-2 text-sm leading-relaxed text-slate-600">
-          Downloads as CSV, ready to open in a spreadsheet. Each report covers{" "}
-          <span className="font-medium text-slate-900">{sy?.label ?? "the active school year"}</span>{" "}
-          and reflects the data as it stands right now.
-        </p>
-        <p className="mt-2 text-xs leading-relaxed text-slate-500">
-          Every export is recorded in the audit log — who exported what, and how many rows — because
-          a downloaded file leaves the system&apos;s access controls behind. Reports never include
-          counseling notes, SEL narrative, or intervention rationale.
-        </p>
-      </header>
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        label="Data Export"
+        title="Reports"
+        description={
+          <>
+            <p>
+              Downloads as CSV, ready to open in a spreadsheet. Each report covers{" "}
+              <span className="font-semibold text-slate-800">{sy?.label ?? "the active school year"}</span>{" "}
+              and reflects the data as it stands right now.
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-slate-400">
+              Every export is recorded in the audit log — who exported what, and how many rows — because
+              a downloaded file leaves the system&apos;s access controls behind. Reports never include
+              counseling notes, SEL narrative, or intervention rationale.
+            </p>
+          </>
+        }
+      />
 
       {!sy ? (
         <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">

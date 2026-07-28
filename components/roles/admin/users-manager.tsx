@@ -11,6 +11,8 @@ import {
 import type { Role, UserStatus } from "@prisma/client";
 import type { Pagination } from "@/lib/pagination";
 import { PaginationBar } from "@/components/shell/pagination-bar";
+import PageHeader from "@/components/shell/page-header";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 type UserRow = {
   id: string;
@@ -51,14 +53,12 @@ export default function UsersManager({
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 md:p-8">
-        <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">User management</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Create staff accounts, suspend access, reset passwords, and manage teacher
-          assignments. All mutations are audited.
-        </p>
-      </section>
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        label="System Administration"
+        title="User management"
+        description="Create staff accounts, suspend access, reset passwords, and manage teacher assignments. All mutations are audited."
+      />
 
       <CreateUserCard />
 
@@ -238,17 +238,20 @@ function CreateUserCard() {
           />
         </Field>
         <Field label="Role" htmlFor="cu-role">
-          <select
-            id="cu-role"
+          <Select
             name="role"
-            required
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-100"
+            defaultValue="TEACHER"
           >
-            <option value="TEACHER">Teacher</option>
-            <option value="COUNSELOR">Counselor</option>
-            <option value="PRINCIPAL">Principal</option>
-            <option value="ADMIN">Admin</option>
-          </select>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="TEACHER">Teacher</SelectItem>
+              <SelectItem value="COUNSELOR">Counselor</SelectItem>
+              <SelectItem value="PRINCIPAL">Principal</SelectItem>
+              <SelectItem value="ADMIN">Admin</SelectItem>
+            </SelectContent>
+          </Select>
         </Field>
         <Field label="Initial password (min 8)" htmlFor="cu-pw">
           <input

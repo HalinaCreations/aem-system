@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { INTERVENTION_TYPES, INTERVENTION_TYPE_LABEL } from "@/lib/intervention/types";
 import { createReferralAction } from "@/app/actions/teacher/referrals";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 type Student = { id: string; label: string; sectionLabel: string };
 
@@ -38,30 +39,37 @@ export default function ReferralForm({ students }: { students: Student[] }) {
     <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5">
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-slate-700">Student</span>
-        <select
+        <Select
           value={studentId}
-          onChange={(e) => setStudentId(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          required
+          onValueChange={(val) => setStudentId(val)}
         >
-          <option value="" disabled>Select a student…</option>
-          {students.map((s) => (
-            <option key={s.id} value={s.id}>{s.label} — {s.sectionLabel}</option>
-          ))}
-        </select>
+          <SelectTrigger>
+            <SelectValue placeholder="Select a student…" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">Select a student…</SelectItem>
+            {students.map((s) => (
+              <SelectItem key={s.id} value={s.id}>{s.label} — {s.sectionLabel}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-slate-700">Suggested intervention type</span>
-        <select
+        <Select
           value={suggestedType}
-          onChange={(e) => setSuggestedType(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          onValueChange={(val) => setSuggestedType(val)}
         >
-          {INTERVENTION_TYPES.map((t) => (
-            <option key={t} value={t}>{INTERVENTION_TYPE_LABEL[t]}</option>
-          ))}
-        </select>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {INTERVENTION_TYPES.map((t) => (
+              <SelectItem key={t} value={t}>{INTERVENTION_TYPE_LABEL[t]}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
@@ -79,15 +87,19 @@ export default function ReferralForm({ students }: { students: Student[] }) {
 
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-slate-700">Urgency</span>
-        <select
+        <Select
           value={urgency}
-          onChange={(e) => setUrgency(e.target.value)}
-          className="w-40 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          onValueChange={(val) => setUrgency(val)}
         >
-          {URGENCY_OPTIONS.map((u) => (
-            <option key={u} value={u}>{u}</option>
-          ))}
-        </select>
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {URGENCY_OPTIONS.map((u) => (
+              <SelectItem key={u} value={u}>{u}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </label>
 
       {error && <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p>}

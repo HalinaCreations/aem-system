@@ -7,6 +7,8 @@ import {
   createSectionAction,
   createSubjectAction,
 } from "@/app/actions/admin/setup";
+import PageHeader from "@/components/shell/page-header";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 type YearRow = {
   id: string;
@@ -58,14 +60,12 @@ export default function SetupManager({ years, sections, subjects }: Props) {
   );
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 md:p-8">
-        <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">School setup</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Create and activate school years, then add the sections and subjects each year offers.
-          Exactly one school year is active at a time — activating a year deactivates the previous one.
-        </p>
-      </section>
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        label="School Operations"
+        title="School setup"
+        description="Create and activate school years, then add the sections and subjects each year offers. Exactly one school year is active at a time — activating a year deactivates the previous one."
+      />
 
       <SchoolYearsCard years={years} />
 
@@ -79,19 +79,23 @@ export default function SetupManager({ years, sections, subjects }: Props) {
           </div>
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">School year</span>
-            <select
+            <Select
               value={selectedYearId}
-              onChange={(e) => setSelectedYearId(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+              onValueChange={(val) => setSelectedYearId(val)}
             >
-              {years.length === 0 && <option value="">No years yet</option>}
-              {years.map((y) => (
-                <option key={y.id} value={y.id}>
-                  {y.label}
-                  {y.isActive ? " · current" : ""}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="No years yet" />
+              </SelectTrigger>
+              <SelectContent>
+                {years.length === 0 && <SelectItem value="">No years yet</SelectItem>}
+                {years.map((y) => (
+                  <SelectItem key={y.id} value={y.id}>
+                    {y.label}
+                    {y.isActive ? " (Active)" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
         </div>
 

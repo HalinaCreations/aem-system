@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/session";
 import { getActiveSchoolYear } from "@/lib/active-year";
 import { getReferableStudents, getTeacherReferrals } from "@/lib/teacher/queries";
 import ReferralForm from "@/components/teacher/referral-form";
+import PageHeader from "@/components/shell/page-header";
 
 const STATUS_TONE: Record<string, string> = {
   PENDING: "border-amber-200 bg-amber-50 text-amber-700",
@@ -27,13 +28,12 @@ export default async function TeacherReferPage() {
   ]);
 
   return (
-    <div className="flex flex-col gap-6">
-      <header>
-        <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Refer a Student</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Propose an intervention for a student in your sections. A counselor reviews and decides — they own any plan that results.
-        </p>
-      </header>
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        label="Student Support"
+        title="Refer a Student"
+        description="Propose an intervention for a student in your sections. A counselor reviews and decides — they own any plan that results."
+      />
 
       {students.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-600">

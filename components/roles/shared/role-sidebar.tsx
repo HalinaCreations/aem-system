@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { logoutAction } from "@/app/actions/auth";
+import { useSystemWorks } from "@/components/shell/system-works-context";
 import {
   Sidebar,
   SidebarContent,
@@ -97,6 +98,7 @@ export default function RoleSidebar({ role, badge, title, schoolYear, theme, sec
   const pathname = usePathname();
   const router = useRouter();
   const { open } = useSidebar();
+  const systemWorks = useSystemWorks();
   const [hash, setHash] = useState("");
   const [pending, startTransition] = useTransition();
 
@@ -178,9 +180,22 @@ export default function RoleSidebar({ role, badge, title, schoolYear, theme, sec
                 const href =
                 section.href ?? `${homeHref}#${sectionSlug(section.title)}`;
 
+                const isLearn = href === "/learn";
+                const handleClick = (e: React.MouseEvent) => {
+                  if (isLearn) {
+                    e.preventDefault();
+                    systemWorks.open("overview");
+                  }
+                };
+
                 return (
                   <SidebarMenuItem key={section.title}>
-                    <SidebarMenuButton active={isActiveHref(href)} href={href} className={!open ? "justify-center" : undefined}>
+                    <SidebarMenuButton
+                      active={isActiveHref(href)}
+                      href={isLearn ? undefined : href}
+                      onClick={isLearn ? handleClick : undefined}
+                      className={!open ? "justify-center" : undefined}
+                    >
                       <IconFolder />
                       <span className={open ? undefined : "sr-only"}>{section.title}</span>
                     </SidebarMenuButton>

@@ -4,7 +4,9 @@ import type { Prisma } from "@prisma/client";
 import ConsentManager from "@/components/roles/admin/consent-manager";
 import { paginate, parsePageParam, PAGE_SIZE } from "@/lib/pagination";
 import { PaginationBar } from "@/components/shell/pagination-bar";
-import { ListToolbar, toForwardParams, type FilterSpec } from "@/components/shell/list-toolbar";
+import { ListToolbar } from "@/components/shell/list-toolbar";
+import { toForwardParams, type FilterSpec } from "@/lib/toolbar-utils";
+import PageHeader from "@/components/shell/page-header";
 
 const STATUS_OPTIONS = [
   { value: "ANY_REVOKED", label: "Has revocation" },
@@ -81,20 +83,25 @@ export default async function AdminConsentPage({
   const filtered = totalFiltered !== totalUnfiltered;
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 md:p-8">
-        <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Consent management</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Manage each student&apos;s consent for data processing, AI analysis, and intervention planning.
-          Revocations require a written justification and are recorded in the audit log.
-        </p>
-        <p className="mt-2 text-xs text-slate-500">
-          {totalUnfiltered.toLocaleString()} students total
-          {filtered && (
-            <span className="ml-1 text-amber-700">· {totalFiltered.toLocaleString()} match the current filter</span>
-          )}
-        </p>
-      </section>
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        label="Privacy & Governance"
+        title="Consent management"
+        description={
+          <>
+            <p>
+              Manage each student&apos;s consent for data processing, AI analysis, and intervention planning.
+              Revocations require a written justification and are recorded in the audit log.
+            </p>
+            <p className="mt-1 text-xs text-slate-400">
+              {totalUnfiltered.toLocaleString()} students total
+              {filtered && (
+                <span className="ml-1 text-amber-600 font-semibold">· {totalFiltered.toLocaleString()} match the current filter</span>
+              )}
+            </p>
+          </>
+        }
+      />
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6">
         <ListToolbar

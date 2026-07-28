@@ -3,7 +3,9 @@ import { getActiveSchoolYear } from "@/lib/active-year";
 import { getTeacherClasses } from "@/lib/teacher/queries";
 import { getSectionRiskForTeacher } from "@/lib/risk/queries";
 import { RiskBadge } from "@/components/shell/explainability-panel";
-import { ListToolbar, toForwardParams, type FilterSpec } from "@/components/shell/list-toolbar";
+import { ListToolbar } from "@/components/shell/list-toolbar";
+import { toForwardParams, type FilterSpec } from "@/lib/toolbar-utils";
+import PageHeader from "@/components/shell/page-header";
 
 const BAND_OPTIONS = [
   { value: "HIGH", label: "HIGH" },
@@ -91,7 +93,13 @@ export default async function TeacherStudentRiskPage({
   const filtered = !!(search || band || sectionFilter);
 
   const filters: FilterSpec[] = [
-    { name: "band", label: "Risk band", value: band, options: BAND_OPTIONS },
+    {
+      name: "band",
+      label: "Risk band",
+      value: band,
+      options: BAND_OPTIONS,
+      placeholder: "Select risk band (all)",
+    },
     {
       name: "sectionId",
       label: "Section",
@@ -100,6 +108,7 @@ export default async function TeacherStudentRiskPage({
         value: s.sectionId,
         label: `${s.gradeLevel} · ${s.sectionName}`,
       })),
+      placeholder: "Select section (all)",
     },
   ];
   // (forwardParams unused here — page has no pagination — but kept for
@@ -107,29 +116,32 @@ export default async function TeacherStudentRiskPage({
   void toForwardParams("q", search, filters);
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Student Risk</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Risk scores and factor breakdowns for students in your sections.{" "}
-            {scoredStudents === 0
-              ? "No scores computed yet — ask the admin to run the engine."
-              : `${scoredStudents} of ${totalStudents} students scored for ${sy.label}.`}
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        label="Student Support"
+        title="Student Risk"
+        description={
+          <>
+            <span>Risk scores and factor breakdowns for students in your sections. </span>
+            <span>
+              {scoredStudents === 0
+                ? "No scores computed yet — ask the admin to run the engine."
+                : `${scoredStudents} of ${totalStudents} students scored for ${sy.label}.`}
+            </span>
             {filtered && (
-              <span className="ml-1 text-amber-700">
-                {totalMatching} match{totalMatching === 1 ? "" : "es"} the current filter.
+              <span className="ml-1 text-amber-600 font-semibold">
+                · {totalMatching} match{totalMatching === 1 ? "" : "es"} the current filter.
               </span>
             )}
-          </p>
-        </div>
+          </>
+        }
+      />
         <ListToolbar
           basePath="/teacher/student-risk"
           searchPlaceholder="Search name or LRN…"
           searchValue={search}
           filters={filters}
         />
-      </header>
 
       {filteredSections.map(({ sectionName, gradeLevel, rows }) => (
         <section key={`${gradeLevel}-${sectionName}`}>

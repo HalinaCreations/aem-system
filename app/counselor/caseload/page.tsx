@@ -10,7 +10,9 @@ import { RiskBadge } from "@/components/shell/explainability-panel";
 import { paginate, parsePageParam, PAGE_SIZE } from "@/lib/pagination";
 import { PaginationBar } from "@/components/shell/pagination-bar";
 import PrewarmCaseloadButton from "@/components/counselor/prewarm-caseload-button";
-import { ListToolbar, toForwardParams, type FilterSpec } from "@/components/shell/list-toolbar";
+import { ListToolbar } from "@/components/shell/list-toolbar";
+import { toForwardParams, type FilterSpec } from "@/lib/toolbar-utils";
+import PageHeader from "@/components/shell/page-header";
 
 const BAND_OPTIONS = [
   { value: "HIGH", label: "HIGH" },
@@ -99,35 +101,38 @@ export default async function CaseloadPage({
   const filtered = pagination.total !== summary.total;
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Caseload Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            {summary.total} student{summary.total === 1 ? "" : "s"} enrolled in {sy.label}.{" "}
-            {summary.scored === 0
-              ? "No risk scores computed yet — ask the admin to run the engine."
-              : `${summary.scored} scored · ${summary.high} HIGH · ${summary.moderate} MODERATE.`}
-            {filtered && (
-              <span className="ml-1 text-amber-700">
-                ({pagination.total} match{pagination.total === 1 ? "" : "es"} the current filter)
-              </span>
-            )}
-          </p>
-          <p className="mt-1 text-xs text-slate-400">
-            Click a student to open the full academic + attendance + behavioral profile. For a global view of the highest-risk students across the whole caseload, open the Pattern Inbox.
-          </p>
-        </div>
-        <ListToolbar
-          basePath="/counselor/caseload"
-          searchPlaceholder="Search name or LRN…"
-          searchValue={search}
-          filters={filters}
-        />
-        {summary.scored > 0 && (
-          <PrewarmCaseloadButton schoolYearId={sy.id} page={pagination.page} />
-        )}
-      </header>
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        label="Student Support"
+        title="Caseload Dashboard"
+        description={
+          <>
+            <p>
+              {summary.total} student{summary.total === 1 ? "" : "s"} enrolled in {sy.label}.{" "}
+              {summary.scored === 0
+                ? "No risk scores computed yet — ask the admin to run the engine."
+                : `${summary.scored} scored · ${summary.high} HIGH · ${summary.moderate} MODERATE.`}
+              {filtered && (
+                <span className="ml-1 text-amber-600 font-semibold">
+                  ({pagination.total} match{pagination.total === 1 ? "" : "es"} the current filter)
+                </span>
+              )}
+            </p>
+            <p className="mt-1 text-xs text-slate-400">
+              Click a student to open the full academic + attendance + behavioral profile. For a global view of the highest-risk students across the whole caseload, open the Pattern Inbox.
+            </p>
+          </>
+        }
+      />
+      <ListToolbar
+        basePath="/counselor/caseload"
+        searchPlaceholder="Search name or LRN…"
+        searchValue={search}
+        filters={filters}
+      />
+      {summary.scored > 0 && (
+        <PrewarmCaseloadButton schoolYearId={sy.id} page={pagination.page} />
+      )}
 
       <div className="rounded-2xl border border-slate-200 bg-white p-2">
         <div className="overflow-x-auto">

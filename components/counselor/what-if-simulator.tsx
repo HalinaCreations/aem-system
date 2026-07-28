@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { whatIfRiskAction } from "@/app/actions/risk/what-if";
 import type { WhatIfInput } from "@/app/actions/risk/what-if";
 import type { ScoringResult } from "@/lib/risk/engine";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import ExplainabilityPanel from "@/components/shell/explainability-panel";
 
 const DEFAULTS: WhatIfInput = {
@@ -113,26 +114,34 @@ export default function WhatIfSimulator() {
 
         <Group title="Profile">
           <label className="text-xs font-medium text-slate-600">SPED status</label>
-          <select
+          <Select
             value={inputs.spedStatus}
-            onChange={(e) => setInputs((p) => ({ ...p, spedStatus: e.target.value as WhatIfInput["spedStatus"] }))}
-            className="rounded-lg border border-slate-200 bg-white p-2 text-sm"
+            onValueChange={(val) => setInputs((p) => ({ ...p, spedStatus: val as WhatIfInput["spedStatus"] }))}
           >
-            <option value="NONE">NONE</option>
-            <option value="IEP">IEP</option>
-            <option value="ACCOMMODATIONS">ACCOMMODATIONS</option>
-          </select>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="NONE">NONE</SelectItem>
+              <SelectItem value="IEP">IEP</SelectItem>
+              <SelectItem value="ACCOMMODATIONS">ACCOMMODATIONS</SelectItem>
+            </SelectContent>
+          </Select>
           <label className="mt-2 text-xs font-medium text-slate-600">Learning modality</label>
-          <select
+          <Select
             value={inputs.learningModality}
-            onChange={(e) => setInputs((p) => ({ ...p, learningModality: e.target.value as WhatIfInput["learningModality"] }))}
-            className="rounded-lg border border-slate-200 bg-white p-2 text-sm"
+            onValueChange={(val) => setInputs((p) => ({ ...p, learningModality: val as WhatIfInput["learningModality"] }))}
           >
-            <option value="FACE_TO_FACE">FACE_TO_FACE</option>
-            <option value="MODULAR">MODULAR</option>
-            <option value="ONLINE">ONLINE</option>
-            <option value="BLENDED">BLENDED</option>
-          </select>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="FACE_TO_FACE">FACE_TO_FACE</SelectItem>
+              <SelectItem value="MODULAR">MODULAR</SelectItem>
+              <SelectItem value="ONLINE">ONLINE</SelectItem>
+              <SelectItem value="BLENDED">BLENDED</SelectItem>
+            </SelectContent>
+          </Select>
         </Group>
 
         <button

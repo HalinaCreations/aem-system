@@ -4,7 +4,7 @@ export const ADMIN_BADGE = "Admin workspace";
 export const ADMIN_TITLE = "Administrative control center";
 export const ADMIN_DESCRIPTION =
   "Manage school-year setup, user access, import pipelines, and governance settings without exposing counseling details.";
-export const ADMIN_THEME: ThemeName = "indigo";
+export const ADMIN_THEME: ThemeName = "emerald";
 
 export const ADMIN_NAV: NavSection[] = [
   {

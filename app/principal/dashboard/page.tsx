@@ -12,6 +12,7 @@ import {
 import { generateSchoolSummary, fallbackMessage } from "@/lib/ai/narrative";
 import { prisma } from "@/lib/prisma";
 import RiskBreakdownTable from "@/components/principal/risk-breakdown-table";
+import PageHeader from "@/components/shell/page-header";
 
 export default async function PrincipalDashboardPage() {
   await requireRole("PRINCIPAL");
@@ -58,13 +59,12 @@ export default async function PrincipalDashboardPage() {
   });
 
   return (
-    <div className="flex flex-col gap-6">
-      <header>
-        <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">School dashboard</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          {distribution.total} active enrollment{distribution.total === 1 ? "" : "s"} in {sy.label}. Drill down by grade, section, or demographic dimension. Disparity flags fire when a group&apos;s HIGH rate exceeds the school average by more than {(highRateMultiplier * 100).toFixed(0)}% (configurable in the admin algorithm panel).
-        </p>
-      </header>
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        label="Strategic Insights"
+        title="School dashboard"
+        description={`${distribution.total} active enrollment${distribution.total === 1 ? "" : "s"} in ${sy.label}. Drill down by grade, section, or demographic dimension. Disparity flags fire when a group's HIGH rate exceeds the school average by more than ${(highRateMultiplier * 100).toFixed(0)}% (configurable in the admin algorithm panel).`}
+      />
 
       {summary.ok ? (
         <section className="rounded-2xl border border-sky-200 bg-sky-50 p-5">

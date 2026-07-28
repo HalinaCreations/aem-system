@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/session";
 import { getActiveSchoolYear } from "@/lib/active-year";
 import { getInterventionsForTeacher } from "@/lib/intervention/queries";
 import TeacherFeedbackForms from "@/components/teacher/teacher-feedback-forms";
+import PageHeader from "@/components/shell/page-header";
 
 const STATUS_TONE: Record<string, string> = {
   PENDING_APPROVAL: "border-amber-200 bg-amber-50 text-amber-700",
@@ -29,13 +30,12 @@ export default async function TeacherInterventionFeedbackPage() {
   const interventions = await getInterventionsForTeacher(session.user.id, sy.id);
 
   return (
-    <div className="flex flex-col gap-6">
-      <header>
-        <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Intervention Feedback</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          {interventions.length} intervention{interventions.length === 1 ? "" : "s"} touching your assignments in {sy.label}. You see public plan fields only — rationale and counseling context stay with the counselor.
-        </p>
-      </header>
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        label="Student Support"
+        title="Intervention Feedback"
+        description={`${interventions.length} intervention${interventions.length === 1 ? "" : "s"} touching your assignments in ${sy.label}. You see public plan fields only — rationale and counseling context stay with the counselor.`}
+      />
 
       {interventions.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm text-slate-400">

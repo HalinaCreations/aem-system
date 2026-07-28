@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/session";
 import { getActiveSchoolYear } from "@/lib/active-year";
 import { prisma } from "@/lib/prisma";
 import ReferralQueue, { type ReferralCard } from "@/components/counselor/referral-queue";
+import PageHeader from "@/components/shell/page-header";
 
 export default async function CounselorReferralsPage() {
   await requireRole("COUNSELOR");
@@ -34,13 +35,12 @@ export default async function CounselorReferralsPage() {
   }));
 
   return (
-    <div className="flex flex-col gap-6">
-      <header>
-        <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Teacher Referrals</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          {referrals.length} pending referral{referrals.length === 1 ? "" : "s"} in {sy.label}. Accept to pre-fill a new intervention you own, or decline with a reason.
-        </p>
-      </header>
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        label="Student Support"
+        title="Teacher Referrals"
+        description={`${referrals.length} pending referral${referrals.length === 1 ? "" : "s"} in ${sy.label}. Accept to pre-fill a new intervention you own, or decline with a reason.`}
+      />
       <ReferralQueue referrals={referrals} />
     </div>
   );

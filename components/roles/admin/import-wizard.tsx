@@ -7,6 +7,7 @@ import { previewAttendanceAction, commitAttendanceAction, type AttendancePreview
 import { previewBehavioralAction, commitBehavioralAction, type BehavioralPreview, type BehavioralCommit } from "@/app/actions/import/behavioral";
 import { previewInterventionsAction, commitInterventionsAction, type InterventionsPreview, type InterventionsCommit } from "@/app/actions/import/interventions";
 import { previewSELAction, commitSELAction, type SELPreview, type SELCommit } from "@/app/actions/import/sel";
+import PageHeader from "@/components/shell/page-header";
 
 type Year = { id: string; label: string; isActive: boolean };
 
@@ -35,15 +36,12 @@ export default function ImportWizard({ years, defaultYearId }: Props) {
   const dataStepsEnabled = !!selectedYearId;
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 md:p-8">
-        <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Import Wizard</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Bulk-load student rosters, grades, attendance, behavioral records, historical interventions, and SEL assessments into the selected school year.
-          Each step previews the first 20 rows and reports validation errors with row numbers before committing.
-          Commits run as a single transaction — all-or-nothing.
-        </p>
-      </section>
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        label="Data Administration"
+        title="Import Wizard"
+        description="Bulk-load student rosters, grades, attendance, behavioral records, historical interventions, and SEL assessments into the selected school year. Each step previews the first 20 rows and reports validation errors with row numbers before committing. Commits run as a single transaction — all-or-nothing."
+      />
 
       {/* Stepper */}
       <ol className="grid gap-3 md:grid-cols-4 lg:grid-cols-7">
