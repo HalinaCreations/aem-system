@@ -3,7 +3,6 @@ import RoleSidebar from "@/components/roles/shared/role-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getAllSchoolYears, getActiveSchoolYear } from "@/lib/active-year";
 import YearSwitcher from "@/components/shell/year-switcher";
-import LogoutButton from "@/components/shell/logout-button";
 import NotificationBell from "@/components/shell/notification-bell";
 import { requireSession } from "@/lib/session";
 import { SystemWorksProvider } from "@/components/shell/system-works-context";
@@ -58,8 +57,8 @@ export default async function RoleShell({
 
           <SidebarInset>
             <div className="flex min-h-screen flex-col">
-              <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/80 backdrop-blur">
-                <div className="flex items-center justify-between gap-3 px-4 py-3 md:px-8">
+              <header className="sticky top-0 z-40 border-b border-slate-200 bg-white h-16 flex items-center shrink-0">
+                <div className="flex-1 flex items-center justify-between gap-3 px-4 md:px-8">
                   <div className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
                     {badge}
                   </div>
@@ -69,7 +68,6 @@ export default async function RoleShell({
                       selectedId={activeYear?.id ?? null}
                     />
                     <NotificationBell userId={session.user.id} role={role} />
-                    <LogoutButton />
                   </div>
                 </div>
                 {viewingHistorical && (

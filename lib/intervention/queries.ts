@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import type {
   InterventionStatus,
   InterventionType,
+  InterventionNoteType,
+  InterventionNoteStatus,
   PatternScope,
   Prisma,
   Role,
@@ -388,6 +390,13 @@ export type TeacherInterventionRow = {
   accommodations: string | null;
   staffActions: string | null;
   targetOutcomes: string | null;
+  notes: Array<{
+    id: string;
+    noteType: InterventionNoteType;
+    content: string;
+    status: InterventionNoteStatus;
+    createdAt: string;
+  }>;
 };
 
 export async function getInterventionsForTeacher(
@@ -426,20 +435,41 @@ export async function getInterventionsForTeacher(
     orderBy: { createdAt: "desc" },
   });
 
+  const notes = await prisma.interventionNote.findMany({
+    where: {
+      interventionId: { in: rows.map((r) => r.id) },
+      authorId: teacherUserId,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
   const labelMap = await resolveScopeLabels(rows, schoolYearId);
-  return rows.map((r) => ({
-    id: r.id,
-    scope: r.scope,
-    scopeLabel: labelMap.get(`${r.scope}:${r.scopeTargetId}`) ?? r.scopeTargetId,
-    type: r.type,
-    status: r.status,
-    startDate: r.startDate.toISOString().slice(0, 10),
-    endDate: r.endDate?.toISOString().slice(0, 10) ?? null,
-    schedule: r.schedule,
-    accommodations: r.accommodations,
-    staffActions: r.staffActions,
-    targetOutcomes: r.targetOutcomes,
-  }));
+  return rows.map((r) => {
+    const interventionNotes = notes
+      .filter((n) => n.interventionId === r.id)
+      .map((n) => ({
+        id: n.id,
+        noteType: n.noteType,
+        content: n.content,
+        status: n.status,
+        createdAt: n.createdAt.toISOString(),
+      }));
+
+    return {
+      id: r.id,
+      scope: r.scope,
+      scopeLabel: labelMap.get(`${r.scope}:${r.scopeTargetId}`) ?? r.scopeTargetId,
+      type: r.type,
+      status: r.status,
+      startDate: r.startDate.toISOString().slice(0, 10),
+      endDate: r.endDate?.toISOString().slice(0, 10) ?? null,
+      schedule: r.schedule,
+      accommodations: r.accommodations,
+      staffActions: r.staffActions,
+      targetOutcomes: r.targetOutcomes,
+      notes: interventionNotes,
+    };
+  });
 }
 
 // ─── Pending approvals (principal queue) ────────────────────────────────────

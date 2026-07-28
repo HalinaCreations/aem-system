@@ -89,6 +89,7 @@ export default async function ClassDetailPage({
         }))}
         sectionRisk={sectionRisk.map((r) => ({
           enrollmentId: r.enrollmentId,
+          studentId: r.studentId,
           firstName: r.firstName,
           lastName: r.lastName,
           riskScore: r.riskScore,

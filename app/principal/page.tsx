@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/session";
 import { getActiveSchoolYear } from "@/lib/active-year";
 import { getSchoolRiskDistribution, getOpenRecommendations } from "@/lib/risk/queries";
 import { PRINCIPAL_NAV } from "@/components/roles/principal/principal-config";
+import Image from "next/image";
 import Link from "next/link";
 import SystemWorksLink from "@/components/shell/system-works-link";
 
@@ -86,9 +87,28 @@ export default async function PrincipalPage() {
     <div className="flex flex-col gap-6 lg:gap-8" style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* ── Welcome Banner ── */}
       <section
-        className="relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-emerald-600 to-slate-900 p-8 text-white shadow-lg"
+        className="relative overflow-hidden rounded-3xl border border-slate-800 p-8 text-white shadow-lg"
       >
-        <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:24px_24px]" />
+        <Image
+          src="/classroom-hero.jpg"
+          alt=""
+          fill
+          priority
+          unoptimized
+          className="object-cover object-center pointer-events-none"
+        />
+
+        {/* dark gradient overlay for text legibility, matching login page */}
+        <div
+          className="absolute inset-0 z-0"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(15,23,42,0.88) 0%, rgba(30,58,138,0.7) 60%, rgba(15,23,42,0.95) 100%)",
+          }}
+        />
+
+        {/* Subtle grid pattern overlay */}
+        <div className="absolute inset-0 z-0 opacity-10 bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:24px_24px]" />
 
         <div className="relative z-10 flex flex-col gap-3">
           <div className="flex items-center gap-2">

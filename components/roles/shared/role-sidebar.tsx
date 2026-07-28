@@ -94,7 +94,7 @@ function splitHref(href: string) {
   };
 }
 
-export default function RoleSidebar({ role, badge, title, schoolYear, theme, sections }: RoleSidebarProps) {
+export default function RoleSidebar({ role, badge, title, theme, sections }: RoleSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { open } = useSidebar();
@@ -140,21 +140,20 @@ export default function RoleSidebar({ role, badge, title, schoolYear, theme, sec
   return (
     <>
       <Sidebar>
-        <SidebarHeader>
-          <div className="flex items-center gap-3">
-            <div className={`flex h-11 w-11 items-center justify-center rounded-2xl border text-sm font-semibold ${themeAccent[theme]}`}>
+        <SidebarHeader className="h-16 flex items-center py-0 px-4 shrink-0 border-b border-slate-200">
+          <div className="flex items-center gap-3 w-full">
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border text-xs font-bold ${themeAccent[theme]}`}>
               {badge.slice(0, 1)}
             </div>
 
             {open ? (
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">AEM System</p>
-                <h2 className="mt-2 text-sm font-semibold text-slate-900">{title}</h2>
-                <p className="mt-1 text-xs text-slate-500">{schoolYear}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 leading-none">AEM System</p>
+                <h2 className="mt-1 text-xs font-bold text-slate-900 leading-tight truncate">{title}</h2>
               </div>
             ) : null}
 
-            <div className="ml-auto">
+            <div className="ml-auto shrink-0">
               <SidebarTrigger />
             </div>
           </div>

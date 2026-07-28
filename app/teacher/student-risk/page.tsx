@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/session";
 import { getActiveSchoolYear } from "@/lib/active-year";
 import { getTeacherClasses } from "@/lib/teacher/queries";
@@ -5,6 +6,8 @@ import { getSectionRiskForTeacher } from "@/lib/risk/queries";
 import { RiskBadge } from "@/components/shell/explainability-panel";
 import { ListToolbar } from "@/components/shell/list-toolbar";
 import { toForwardParams, type FilterSpec } from "@/lib/toolbar-utils";
+import { paginate, parsePageParam, PAGE_SIZE } from "@/lib/pagination";
+import { PaginationBar } from "@/components/shell/pagination-bar";
 import PageHeader from "@/components/shell/page-header";
 
 const BAND_OPTIONS = [
@@ -89,8 +92,22 @@ export default async function TeacherStudentRiskPage({
       }),
     }));
 
-  const totalMatching = filteredSections.reduce((acc, s) => acc + s.rows.length, 0);
+  const allRows = filteredSections.flatMap((s) =>
+    s.rows.map((r) => ({
+      ...r,
+      sectionName: s.sectionName,
+      gradeLevel: s.gradeLevel,
+    }))
+  );
+
+  const sortedRows = [...allRows].sort((a, b) => (b.riskScore ?? -1) - (a.riskScore ?? -1));
+
+  const totalMatching = sortedRows.length;
   const filtered = !!(search || band || sectionFilter);
+
+  const requestedPage = parsePageParam(sp.page);
+  const pagination = paginate(totalMatching, requestedPage, PAGE_SIZE);
+  const paginatedRows = sortedRows.slice(pagination.skip, pagination.skip + pagination.take);
 
   const filters: FilterSpec[] = [
     {
@@ -111,9 +128,8 @@ export default async function TeacherStudentRiskPage({
       placeholder: "Select section (all)",
     },
   ];
-  // (forwardParams unused here — page has no pagination — but kept for
-  // consistency with the other paginated list pages.)
-  void toForwardParams("q", search, filters);
+  
+  const forwardParams = toForwardParams("q", search, filters);
 
   return (
     <div className="flex flex-col gap-4">
@@ -136,74 +152,79 @@ export default async function TeacherStudentRiskPage({
           </>
         }
       />
-        <ListToolbar
-          basePath="/teacher/student-risk"
-          searchPlaceholder="Search name or LRN…"
-          searchValue={search}
-          filters={filters}
-        />
+      <ListToolbar
+        basePath="/teacher/student-risk"
+        searchPlaceholder="Search name or LRN…"
+        searchValue={search}
+        filters={filters}
+      />
 
-      {filteredSections.map(({ sectionName, gradeLevel, rows }) => (
-        <section key={`${gradeLevel}-${sectionName}`}>
-          <h2 className="mb-2 text-sm font-semibold text-slate-700">
-            {gradeLevel} · {sectionName} <span className="text-slate-400">({rows.length})</span>
-          </h2>
-          <div className="rounded-2xl border border-slate-200 bg-white p-2">
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-slate-50 text-xs text-slate-500">
-                  <tr>
-                    <th className="px-3 py-2 font-medium">#</th>
-                    <th className="px-3 py-2 font-medium">Name</th>
-                    <th className="px-3 py-2 font-medium">LRN</th>
-                    <th className="px-3 py-2 font-medium">Risk Band</th>
-                    <th className="px-3 py-2 font-medium">Academic</th>
-                    <th className="px-3 py-2 font-medium">Attendance</th>
-                    <th className="px-3 py-2 font-medium">Behavioral</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows
-                    .slice()
-                    .sort((a, b) => (b.riskScore ?? -1) - (a.riskScore ?? -1))
-                    .map((r, i) => (
-                      <tr key={r.enrollmentId} className="border-t border-slate-100 hover:bg-slate-50">
-                        <td className="px-3 py-2 text-slate-400">{i + 1}</td>
-                        <td className="px-3 py-2 font-medium text-slate-900">
-                          {r.lastName}, {r.firstName}
-                        </td>
-                        <td className="px-3 py-2 font-mono text-xs text-slate-500">{r.lrn}</td>
-                        <td className="px-3 py-2">
-                          <RiskBadge band={r.riskBand} score={r.riskScore} />
-                        </td>
-                        <td className="px-3 py-2 text-xs text-slate-600">
-                          {r.factors ? `${r.factors.academic}` : "—"}
-                        </td>
-                        <td className="px-3 py-2 text-xs text-slate-600">
-                          {r.factors ? `${r.factors.attendance}` : "—"}
-                        </td>
-                        <td className="px-3 py-2 text-xs text-slate-600">
-                          {r.factors ? `${r.factors.behavioral}` : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  {rows.length === 0 && (
-                    <tr>
-                      <td colSpan={7} className="px-3 py-4 text-center text-xs text-slate-500">
-                        No students in this section match the current filter.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead className="bg-slate-50/50 border-b border-slate-100 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
+              <tr>
+                <th className="px-4 py-3">#</th>
+                <th className="px-4 py-3">Student Name</th>
+                <th className="px-4 py-3">LRN</th>
+                <th className="px-4 py-3">Section</th>
+                <th className="px-4 py-3">Risk Band</th>
+                <th className="px-4 py-3">Academic</th>
+                <th className="px-4 py-3">Attendance</th>
+                <th className="px-4 py-3">Behavioral</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {paginatedRows.map((r, i) => (
+                <tr key={r.enrollmentId} className="transition-colors hover:bg-slate-50/60 align-middle">
+                  <td className="px-4 py-3 tabular-nums text-slate-400">{pagination.skip + i + 1}</td>
+                  <td className="px-4 py-3 font-medium">
+                    <Link
+                      href={`/teacher/students/${r.studentId}`}
+                      className="text-slate-900 hover:text-emerald-700 hover:underline"
+                    >
+                      {r.lastName}, {r.firstName}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs text-slate-500">{r.lrn}</td>
+                  <td className="px-4 py-3 text-xs text-slate-600 font-medium">
+                    {r.gradeLevel} &middot; {r.sectionName}
+                  </td>
+                  <td className="px-4 py-3">
+                    <RiskBadge band={r.riskBand} score={r.riskScore} />
+                  </td>
+                  <td className="px-4 py-3 text-xs text-slate-650 font-semibold">
+                    {r.factors ? `${r.factors.academic}` : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-slate-650 font-semibold">
+                    {r.factors ? `${r.factors.attendance}` : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-slate-650 font-semibold">
+                    {r.factors ? `${r.factors.behavioral}` : "—"}
+                  </td>
+                </tr>
+              ))}
+              {paginatedRows.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="px-4 py-8 text-center text-sm text-slate-400">
+                    No students match the current filter.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {totalMatching > 0 && (
+          <div className="border-t border-slate-100 bg-slate-50/50 px-4 py-3">
+            <PaginationBar pagination={pagination} basePath="/teacher/student-risk" forwardParams={forwardParams} />
           </div>
-        </section>
-      ))}
+        )}
+      </div>
 
       <p className="text-xs text-slate-400">
         Risk scores are recomputed by the admin. Factor columns show the 0–100 sub-score for each
-        dimension. Full explainability is available in the Counselor/Principal student profile view.
+        dimension. Full explainability is available in the Student Profile view.
       </p>
     </div>
   );
