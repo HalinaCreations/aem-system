@@ -143,6 +143,9 @@ enum AuditAction {
   RISK_OVERRIDE
   COUNSELING_NOTE_CREATED
   COUNSELING_NOTE_READ
+  SEL_ASSESSMENT_CREATED
+  SEL_ASSESSMENT_READ
+  REPORT_EXPORTED
   AI_NARRATIVE_GENERATED
   INTERVENTION_CREATED
   INTERVENTION_ACTIVATED
@@ -150,7 +153,22 @@ enum AuditAction {
   INTERVENTION_APPROVED
   INTERVENTION_REVISED
   INTERIM_REVISION
+  REFERRAL_CREATED
+  REFERRAL_ACCEPTED
+  REFERRAL_DECLINED
   YEAR_SWITCHED
+}
+
+enum ReferralStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum ReferralUrgency {
+  LOW
+  MEDIUM
+  HIGH
 }
 
 enum InterventionStatus {
@@ -161,6 +179,11 @@ enum InterventionStatus {
   CANCELLED
 }
 
+/// Spec §6.6 names nine plan types; the first eight below predate that
+/// alignment and are kept because historical rows reference them. The six
+/// added in Phase 8.2.1 close the gap — notably PARENT_CONFERENCE and
+/// PEER_SUPPORT, which §10 already expects the recommendation engine to be
+/// able to emit.
 enum InterventionType {
   ACADEMIC_SUPPORT
   COUNSELING_SESSION
@@ -170,6 +193,12 @@ enum InterventionType {
   SECTION_INTERVENTION
   SUBJECT_REMEDIATION
   ATTENDANCE_PROGRAM
+  TUTORING
+  PEER_SUPPORT
+  PARENT_CONFERENCE
+  EXTERNAL_REFERRAL
+  SEL_PROGRAM
+  STUDY_SKILLS_WORKSHOP
 }
 
 enum InterventionNoteType {
@@ -183,6 +212,24 @@ enum InterventionNoteStatus {
   ACKNOWLEDGED
   INCORPORATED
   DISMISSED
+}
+
+/// Concern scale shared by every SEL dimension. Direction is constant:
+/// THRIVING is always the healthy end, CRITICAL always the most concerning.
+/// For `stressLevel` that means THRIVING = well-regulated, CRITICAL = severe
+/// stress — read it as "level of concern", not "amount of the thing".
+enum SELLevel {
+  THRIVING
+  STABLE
+  AT_RISK
+  CRITICAL
+}
+
+enum NotificationKind {
+  RISK_BAND_INCREASED
+  REFERRAL_ACCEPTED
+  REFERRAL_DECLINED
+  APPROVAL_REQUESTED
 }
 
 enum ParticipationOutcome {
@@ -210,10 +257,13 @@ model User {
   recordedAttendance    Attendance[]
   recordedBehavioral    BehavioralRecord[]
   counselingNotes       CounselingNote[]
+  selAssessments        SELAssessment[]
+  notifications         Notification[]
   interventionsOwned    Intervention[]
   interventionNotes     InterventionNote[]
   interventionRevisions InterventionRevision[]
   riskOverrides         RiskOverride[]
+  referralsAuthored     InterventionReferral[] @relation("ReferralAuthor")
 
   @@index([role])
 }
@@ -232,6 +282,7 @@ model SchoolYear {
   enrollments        StudentEnrollment[]
   teacherAssignments TeacherAssignment[]
   interventions      Intervention[]
+  referrals          InterventionReferral[]
 
   @@index([isActive])
 }
@@ -303,6 +354,7 @@ model Student {
   enrollments       StudentEnrollment[]
   consentRecords    ConsentRecord[]
   spedStatusHistory SpedStatusChange[]
+  referrals         InterventionReferral[]
 
   @@index([lastName, firstName])
 }
@@ -340,6 +392,7 @@ model StudentEnrollment {
   riskAssessments            RiskAssessment[]
   riskOverrides              RiskOverride[]
   counselingNotes            CounselingNote[]
+  selAssessments             SELAssessment[]
   interventionParticipations InterventionParticipation[]
 
   @@unique([studentId, schoolYearId])
@@ -546,10 +599,69 @@ model RecommendationDraft {
   @@index([schoolYearId, status])
 }
 
+// Teacher-originated referral: a structured proposal a counselor converts into
+// a real intervention. STUDENT scope only. Mirrors RecommendationDraft but is
+// human-originated — kept separate to preserve algorithm-vs-human provenance.
+model InterventionReferral {
+  id            String          @id @default(cuid())
+  referredById  String
+  referredBy    User            @relation("ReferralAuthor", fields: [referredById], references: [id], onDelete: Restrict)
+  studentId     String
+  student       Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  schoolYearId  String
+  schoolYear    SchoolYear      @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
+
+  suggestedType InterventionType
+  rationale     String
+  urgency       ReferralUrgency @default(MEDIUM)
+
+  status        ReferralStatus  @default(PENDING)
+  declineReason String?
+  reviewedById  String?
+  reviewedAt    DateTime?
+
+  resultingInterventionId String?       @unique
+  resultingIntervention   Intervention? @relation("ReferralResult", fields: [resultingInterventionId], references: [id], onDelete: SetNull)
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([schoolYearId, status])
+  @@index([referredById])
+  @@index([studentId])
+}
+
 // ─── Phase 3: Counseling & Intervention ─────────────────────────────────────
 
 // Free-form counseling notes attached to a student's enrollment.
 // Body is counselor-only; query layer must strip for other roles.
+/// Periodic Social-Emotional Learning assessment (spec §6.4). Counselor-managed
+/// and counselor-authored; teachers and admin have no access at any layer, and
+/// the principal sees dimension levels but never `notes` — the same treatment
+/// counseling note bodies get.
+///
+/// `selfAssessment` is the student's own rating as reported to the counselor.
+/// There is no student portal (spec §16), so it is recorded second-hand and is
+/// optional for that reason.
+model SELAssessment {
+  id                 String            @id @default(cuid())
+  enrollmentId       String
+  enrollment         StudentEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  assessedById       String
+  assessedBy         User              @relation(fields: [assessedById], references: [id], onDelete: Restrict)
+  assessedAt         DateTime          @default(now())
+  emotionalWellbeing SELLevel
+  stressLevel        SELLevel
+  peerRelationships  SELLevel
+  selfAssessment     SELLevel?
+  notes              String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@index([enrollmentId, assessedAt])
+  @@index([assessedById])
+}
+
 model CounselingNote {
   id           String            @id @default(cuid())
   enrollmentId String
@@ -591,6 +703,7 @@ model Intervention {
   participations InterventionParticipation[]
   notes          InterventionNote[]
   revisions      InterventionRevision[]
+  referralResult InterventionReferral? @relation("ReferralResult")
 
   @@index([scope, scopeTargetId])
   @@index([schoolYearId, status])
@@ -662,6 +775,28 @@ model InterventionRevision {
 // Cache Gemini responses keyed by a SHA-256 hash of the prompt + model so we
 // don't re-spend tokens on identical inputs. Rows are immutable; invalidation
 // = recompute the hash with a new prompt template or model version.
+/// In-app notification (spec §5 — "Receive in-app notifications when a student
+/// in their class crosses into a higher risk band"). Deliberately carries no
+/// sensitive content: `title`/`body` name the student and the event, never a
+/// rationale, counseling note, or SEL detail. Recipients still have to open the
+/// linked page, where the normal query-layer access rules apply.
+model Notification {
+  id           String           @id @default(cuid())
+  userId       String
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind         NotificationKind
+  title        String
+  body         String
+  /// In-app destination. Nullable because not every event has a useful page.
+  linkHref     String?
+  schoolYearId String?
+  readAt       DateTime?
+  createdAt    DateTime         @default(now())
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+}
+
 model AICache {
   id          String   @id @default(cuid())
   contentHash String   @unique

@@ -8,6 +8,7 @@ import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { computeRiskScore } from "../lib/risk/engine";
+import { fetchInterventionHistory, EMPTY_INTERVENTION_HISTORY } from "../lib/risk/intervention-history";
 import { detectStudentPatterns, detectSectionPatterns } from "../lib/patterns/detector";
 import { generateRecommendation } from "../lib/patterns/recommendations";
 import type { PatternRuleConfig, PatternRuleId } from "../lib/patterns/rules";
@@ -36,11 +37,17 @@ async function main() {
   });
   console.log(`Computing for ${enrollments.length} enrollments…`);
 
+  const historyByStudent = await fetchInterventionHistory(
+    enrollments.map((e) => e.studentId),
+    sy.id,
+  );
+
   for (const e of enrollments) {
     const result = computeRiskScore({
       grades: e.grades,
       attendance: e.attendance,
       behavioral: e.behavioralRecords,
+      interventionHistory: historyByStudent.get(e.studentId) ?? EMPTY_INTERVENTION_HISTORY,
       spedStatus: e.student.spedStatus,
       learningModality: e.learningModality,
       weights,

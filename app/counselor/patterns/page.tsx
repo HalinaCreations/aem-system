@@ -60,6 +60,12 @@ export default async function CounselorPatternInboxPage({
         <p className="mt-1 text-sm text-slate-600">
           {total} open pattern match{total === 1 ? "" : "es"} across all scopes in {sy.label}. Resolve once you&apos;ve acted on a pattern; dismiss to clear without action. Both leave an audit trail.
         </p>
+        <Link
+          href="/learn/patterns"
+          className="mt-2 inline-block text-xs font-medium text-slate-500 underline underline-offset-2 transition-colors hover:text-slate-900"
+        >
+          What does each rule look for?
+        </Link>
       </header>
 
       {total === 0 ? (

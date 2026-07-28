@@ -4,6 +4,8 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getAllSchoolYears, getActiveSchoolYear } from "@/lib/active-year";
 import YearSwitcher from "@/components/shell/year-switcher";
 import LogoutButton from "@/components/shell/logout-button";
+import NotificationBell from "@/components/shell/notification-bell";
+import { requireSession } from "@/lib/session";
 
 export type RoleName = "admin" | "teacher" | "counselor" | "principal";
 export type ThemeName = "indigo" | "emerald" | "amber" | "rose";
@@ -31,9 +33,10 @@ export default async function RoleShell({
   navSections,
   children,
 }: RoleShellProps) {
-  const [years, activeYear] = await Promise.all([
+  const [years, activeYear, session] = await Promise.all([
     getAllSchoolYears(),
     getActiveSchoolYear(),
+    requireSession(),
   ]);
 
   const schoolYearLabel = activeYear?.label ?? "No school year";
@@ -63,6 +66,7 @@ export default async function RoleShell({
                     years={years.map((y) => ({ id: y.id, label: y.label, isActive: y.isActive }))}
                     selectedId={activeYear?.id ?? null}
                   />
+                  <NotificationBell userId={session.user.id} role={role} />
                   <LogoutButton />
                 </div>
               </div>

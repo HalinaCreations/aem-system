@@ -11,6 +11,7 @@ import {
   detectSignificantChange,
   type InterventionSnapshot,
 } from "@/lib/intervention/diff";
+import { INTERVENTION_TYPES } from "@/lib/intervention/types";
 
 const approveSchema = z.object({
   interventionId: z.string().min(1),
@@ -127,16 +128,7 @@ export async function rejectInterventionAction(input: unknown): Promise<Approval
 // ─── Interim revision (principal-only override) ─────────────────────────────
 
 const SCOPE = z.enum(["STUDENT", "SECTION", "GRADE", "SCHOOL"]);
-const TYPE = z.enum([
-  "ACADEMIC_SUPPORT",
-  "COUNSELING_SESSION",
-  "IMMEDIATE_COUNSELING",
-  "POSITIVE_REINFORCEMENT",
-  "CASE_REVIEW",
-  "SECTION_INTERVENTION",
-  "SUBJECT_REMEDIATION",
-  "ATTENDANCE_PROGRAM",
-]);
+const TYPE = z.enum(INTERVENTION_TYPES);
 const DATE = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD");
 
 const interimSchema = z.object({

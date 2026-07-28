@@ -25,6 +25,24 @@ export const TEACHER_NAV: NavSection[] = [
     description:
       "View active intervention plans, log sessions you personally conducted, submit observation notes, and request plan revisions.",
   },
+  {
+    title: "Refer a Student",
+    href: "/teacher/refer",
+    description:
+      "Propose an intervention for a student in your sections; a counselor reviews and decides.",
+  },
+  {
+    title: "How this system works",
+    href: "/learn",
+    description:
+      "Plain-language explanation of how the risk score is computed, what each pattern rule looks for, and what the system decides versus what you decide.",
+  },
+  {
+    title: "Reports",
+    href: "/reports",
+    description:
+      "Download CSV extracts of the data behind your screens — risk rosters, intervention outcomes, attendance, and governance breakdowns.",
+  },
 ];
 
 export const TEACHER_METRICS = [

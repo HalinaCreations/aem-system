@@ -13,18 +13,11 @@ import {
   shouldReenterApproval,
   type InterventionSnapshot,
 } from "@/lib/intervention/diff";
+import { INTERVENTION_TYPES } from "@/lib/intervention/types";
+import { activePrincipalIds, emitNotifications } from "@/lib/notifications";
 
 const SCOPE = z.enum(["STUDENT", "SECTION", "GRADE", "SCHOOL"]);
-const TYPE = z.enum([
-  "ACADEMIC_SUPPORT",
-  "COUNSELING_SESSION",
-  "IMMEDIATE_COUNSELING",
-  "POSITIVE_REINFORCEMENT",
-  "CASE_REVIEW",
-  "SECTION_INTERVENTION",
-  "SUBJECT_REMEDIATION",
-  "ATTENDANCE_PROGRAM",
-]);
+const TYPE = z.enum(INTERVENTION_TYPES);
 const DATE = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD");
 
 const inputSchema = z.object({
@@ -40,6 +33,7 @@ const inputSchema = z.object({
   rationale: z.string().trim().min(1, "Rationale is required.").max(4000),
   counselingContext: z.string().trim().max(4000).optional().or(z.literal("")),
   triggeringRecommendationId: z.string().min(1).optional().or(z.literal("")),
+  triggeringReferralId: z.string().min(1).optional().or(z.literal("")),
 });
 
 export type CreateInterventionResult =
@@ -77,6 +71,25 @@ export async function createInterventionAction(
       return { ok: false, error: "Recommendation draft not found or already instantiated." };
     }
     draftToInstantiate = draft;
+  }
+
+  // Optional referral acceptance — validate it exists and is pending.
+  let referralToAccept:
+    | { id: string; referredById: string; student: { firstName: string; lastName: string } }
+    | null = null;
+  if (data.triggeringReferralId) {
+    const referral = await prisma.interventionReferral.findFirst({
+      where: { id: data.triggeringReferralId, status: "PENDING", schoolYearId: sy.id },
+      select: {
+        id: true,
+        referredById: true,
+        student: { select: { firstName: true, lastName: true } },
+      },
+    });
+    if (!referral) {
+      return { ok: false, error: "Referral not found or already reviewed." };
+    }
+    referralToAccept = referral;
   }
 
   const status = data.scope === "STUDENT" ? "ACTIVE" : "PENDING_APPROVAL";
@@ -131,6 +144,18 @@ export async function createInterventionAction(
       });
     }
 
+    if (referralToAccept) {
+      await tx.interventionReferral.update({
+        where: { id: referralToAccept.id },
+        data: {
+          status: "ACCEPTED",
+          resultingInterventionId: created.id,
+          reviewedById: session.user.id,
+          reviewedAt: new Date(),
+        },
+      });
+    }
+
     return created;
   });
 
@@ -157,8 +182,46 @@ export async function createInterventionAction(
     });
   }
 
+  if (referralToAccept) {
+    await logAudit({
+      action: "REFERRAL_ACCEPTED",
+      userId: session.user.id,
+      resourceType: "InterventionReferral",
+      resourceId: referralToAccept.id,
+      metadata: { interventionId: intervention.id },
+    });
+
+    await emitNotifications([
+      {
+        userId: referralToAccept.referredById,
+        kind: "REFERRAL_ACCEPTED",
+        title: `Referral accepted — ${referralToAccept.student.firstName} ${referralToAccept.student.lastName}`,
+        body: "A counselor accepted your referral and created an intervention plan.",
+        linkHref: "/teacher/intervention-feedback",
+        schoolYearId: sy.id,
+      },
+    ]);
+  }
+
+  // Broader-scope plans sit in PENDING_APPROVAL until a principal acts; without
+  // this they only surface if someone happens to open the approval queue.
+  if (status === "PENDING_APPROVAL") {
+    const principals = await activePrincipalIds();
+    await emitNotifications(
+      principals.map((principalId) => ({
+        userId: principalId,
+        kind: "APPROVAL_REQUESTED" as const,
+        title: `Approval needed — ${data.scope.toLowerCase()}-scope intervention`,
+        body: `${session.user.name ?? "A counselor"} submitted a plan that cannot activate without your approval.`,
+        linkHref: `/principal/interventions/${intervention.id}`,
+        schoolYearId: sy.id,
+      })),
+    );
+  }
+
   revalidatePath("/counselor/interventions");
   revalidatePath(`/counselor/interventions/${intervention.id}`);
+  revalidatePath("/counselor/referrals");
   return { ok: true, interventionId: intervention.id };
 }
 

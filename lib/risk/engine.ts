@@ -17,8 +17,14 @@ import type {
   AcademicBreakdown,
   AttendanceBreakdown,
   BehavioralBreakdown,
+  InterventionHistoryBreakdown,
   ProfileBreakdown,
 } from "./types";
+import type { StudentInterventionHistory } from "./intervention-history";
+
+// The engine stays pure — callers fetch history via `fetchInterventionHistory`
+// and pass the result in.
+type InterventionHistoryInput = StudentInterventionHistory;
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -179,6 +185,55 @@ function computeBehavioralBreakdown(behavioral: BehavioralRecord[]): BehavioralB
   return { totalIncidents: total, highCount, moderateCount, lowCount, severityWeightedCount, subScore };
 }
 
+// ─── Intervention History Sub-score ──────────────────────────────────────────
+
+// What this dimension measures is *whether prior support worked* — the one
+// signal the other four dimensions cannot see. It deliberately does NOT add
+// risk for being under an active plan: the conditions that justified the plan
+// are already counted by academic/attendance/behavioral, so charging for the
+// plan itself would double-count and create a feedback loop where helping a
+// student raises their score. Repeated need and unfavourable outcomes are what
+// carry signal; a favourable prior outcome is protective.
+const RECURRENCE_RISK = [0, 10, 25, 40]; // indexed by prior completed count, 3+ clamps to 40
+const DECLINING_RISK_EACH = 20;
+const DECLINING_RISK_CAP = 40;
+const IMPROVING_CREDIT_EACH = 15;
+const IMPROVING_CREDIT_CAP = 30;
+
+function computeInterventionHistoryBreakdown(
+  history: InterventionHistoryInput,
+): InterventionHistoryBreakdown {
+  const outcomes = history.priorCompletedOutcomes;
+  const priorCompletedCount = outcomes.length;
+
+  if (priorCompletedCount === 0) {
+    return {
+      priorCompletedCount: 0,
+      improvingCount: 0,
+      decliningCount: 0,
+      hasActiveIntervention: history.hasActiveIntervention,
+      subScore: 0, // no history → no risk from this dimension
+    };
+  }
+
+  const improvingCount = outcomes.filter((o) => o === "IMPROVING").length;
+  const decliningCount = outcomes.filter((o) => o === "DECLINING").length;
+
+  const recurrenceRisk = RECURRENCE_RISK[Math.min(priorCompletedCount, RECURRENCE_RISK.length - 1)];
+  const decliningRisk = Math.min(DECLINING_RISK_CAP, decliningCount * DECLINING_RISK_EACH);
+  const improvingCredit = Math.min(IMPROVING_CREDIT_CAP, improvingCount * IMPROVING_CREDIT_EACH);
+
+  const subScore = Math.max(0, Math.min(100, Math.round(recurrenceRisk + decliningRisk - improvingCredit)));
+
+  return {
+    priorCompletedCount,
+    improvingCount,
+    decliningCount,
+    hasActiveIntervention: history.hasActiveIntervention,
+    subScore,
+  };
+}
+
 // ─── Profile Sub-score ───────────────────────────────────────────────────────
 
 function computeProfileBreakdown(spedStatus: SpedStatus, learningModality: LearningModality): ProfileBreakdown {
@@ -199,6 +254,7 @@ export interface ScoringInput {
   grades: Grade[];
   attendance: Attendance[];
   behavioral: BehavioralRecord[];
+  interventionHistory: InterventionHistoryInput;
   spedStatus: SpedStatus;
   learningModality: LearningModality;
   weights: RiskWeights;
@@ -215,6 +271,7 @@ export function computeRiskScore(input: ScoringInput): ScoringResult {
   const academic = computeAcademicBreakdown(input.grades);
   const attendance = computeAttendanceBreakdown(input.attendance);
   const behavioral = computeBehavioralBreakdown(input.behavioral);
+  const interventionHistory = computeInterventionHistoryBreakdown(input.interventionHistory);
   const profile = computeProfileBreakdown(input.spedStatus, input.learningModality);
 
   const { weights, thresholds } = input;
@@ -231,7 +288,7 @@ export function computeRiskScore(input: ScoringInput): ScoringResult {
     (academic.subScore * w.academic +
       attendance.subScore * w.attendance +
       behavioral.subScore * w.behavioral +
-      0 * w.interventionHistory + // Phase 3 — no intervention data yet
+      interventionHistory.subScore * w.interventionHistory +
       profile.subScore * w.profile) *
       10,
   ) / 10;
@@ -247,16 +304,11 @@ export function computeRiskScore(input: ScoringInput): ScoringResult {
     academic: academic.subScore,
     attendance: attendance.subScore,
     behavioral: behavioral.subScore,
-    interventionHistory: 0,
+    interventionHistory: interventionHistory.subScore,
     profile: profile.subScore,
-    breakdown: { academic, attendance, behavioral, profile },
+    breakdown: { academic, attendance, behavioral, interventionHistory, profile },
   };
 
   return { score, band, factors };
 }
 
-// ─── Band helpers (UI use) ───────────────────────────────────────────────────
-
-export function bandColor(band: RiskBandLabel): "green" | "amber" | "red" {
-  return band === "HIGH" ? "red" : band === "MODERATE" ? "amber" : "green";
-}

@@ -43,6 +43,14 @@ export interface BehavioralBreakdown {
   subScore: number;
 }
 
+export interface InterventionHistoryBreakdown {
+  priorCompletedCount: number;     // completed interventions across all years
+  improvingCount: number;          // completed with an IMPROVING outcome
+  decliningCount: number;          // completed with a DECLINING outcome
+  hasActiveIntervention: boolean;  // currently under a plan in the scored year
+  subScore: number;
+}
+
 export interface ProfileBreakdown {
   spedStatus: string;
   learningModality: string;
@@ -59,6 +67,7 @@ export interface RiskFactors {
     academic: AcademicBreakdown;
     attendance: AttendanceBreakdown;
     behavioral: BehavioralBreakdown;
+    interventionHistory: InterventionHistoryBreakdown;
     profile: ProfileBreakdown;
   };
 }

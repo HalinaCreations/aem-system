@@ -5,23 +5,13 @@ import { useRouter } from "next/navigation";
 import { updateInterventionAction } from "@/app/actions/counselor/interventions";
 import { interimReviseInterventionAction } from "@/app/actions/principal/interventions";
 import type { InterventionTargets } from "@/lib/intervention/queries";
+import { INTERVENTION_TYPES, INTERVENTION_TYPE_LABEL } from "@/lib/intervention/types";
 
 const SCOPE_OPTIONS = [
   { value: "STUDENT", label: "Individual" },
   { value: "SECTION", label: "Section" },
   { value: "GRADE", label: "Grade level" },
   { value: "SCHOOL", label: "School-wide" },
-] as const;
-
-const TYPE_OPTIONS = [
-  "ACADEMIC_SUPPORT",
-  "COUNSELING_SESSION",
-  "IMMEDIATE_COUNSELING",
-  "POSITIVE_REINFORCEMENT",
-  "CASE_REVIEW",
-  "SECTION_INTERVENTION",
-  "SUBJECT_REMEDIATION",
-  "ATTENDANCE_PROGRAM",
 ] as const;
 
 type Scope = (typeof SCOPE_OPTIONS)[number]["value"];
@@ -32,7 +22,7 @@ export type InterventionEditSnapshot = {
   status: string;
   scope: Scope;
   scopeTargetId: string;
-  type: (typeof TYPE_OPTIONS)[number];
+  type: (typeof INTERVENTION_TYPES)[number];
   startDate: string; // yyyy-mm-dd
   endDate: string | null;
   schedule: string | null;
@@ -64,7 +54,7 @@ export default function InterventionEditForm({
 
   const [scope, setScope] = useState<Scope>(initial.scope);
   const [scopeTargetId, setScopeTargetId] = useState<string>(initial.scopeTargetId);
-  const [type, setType] = useState<(typeof TYPE_OPTIONS)[number]>(initial.type);
+  const [type, setType] = useState<(typeof INTERVENTION_TYPES)[number]>(initial.type);
   const [startDate, setStartDate] = useState<string>(initial.startDate);
   const [endDate, setEndDate] = useState<string>(initial.endDate ?? "");
   const [schedule, setSchedule] = useState<string>(initial.schedule ?? "");
@@ -258,13 +248,13 @@ export default function InterventionEditForm({
           <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Type</label>
           <select
             value={type}
-            onChange={(e) => setType(e.target.value as (typeof TYPE_OPTIONS)[number])}
+            onChange={(e) => setType(e.target.value as (typeof INTERVENTION_TYPES)[number])}
             disabled={pending}
             className="mt-1 w-full rounded-lg border border-slate-200 bg-white p-2 text-sm"
           >
-            {TYPE_OPTIONS.map((t) => (
+            {INTERVENTION_TYPES.map((t) => (
               <option key={t} value={t}>
-                {t.replace(/_/g, " ")}
+                {INTERVENTION_TYPE_LABEL[t]}
               </option>
             ))}
           </select>

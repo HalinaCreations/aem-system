@@ -1,4 +1,6 @@
-import type { CounselingNoteRow, StudentProfileData } from "@/lib/student/queries";
+import type { CounselingNoteRow, SELAssessmentRow, StudentProfileData } from "@/lib/student/queries";
+import type { SELLevel } from "@prisma/client";
+import SELAssessmentForm from "@/components/counselor/sel-assessment-form";
 import type { RiskBandLabel, RiskFactors } from "@/lib/risk/types";
 import type { GenerateResult } from "@/lib/ai/gemini";
 import { fallbackMessage } from "@/lib/ai/gemini";
@@ -13,6 +15,9 @@ type Props = {
   // Counselor-only. Other roles never receive this prop. When present (even
   // as an empty array), the Counseling Notes section + form is rendered.
   counselingNotes?: CounselingNoteRow[];
+  // Counselor + principal. `notes` inside each row is already null for the
+  // principal — the query strips it, this component never decides that.
+  selAssessments?: SELAssessmentRow[];
   /**
    * Latest risk assessment for the enrollment. When provided, the Risk Profile
    * section renders the score + explainability + (optionally) the AI narrative.
@@ -59,10 +64,11 @@ const STATUS_TEXT: Record<string, string> = {
   EXCUSED: "E",
 };
 
-export default function StudentProfileView({ profile, viewerRole, counselingNotes, risk }: Props) {
+export default function StudentProfileView({ profile, viewerRole, counselingNotes, selAssessments, risk }: Props) {
   const { student, enrollment, consents, grades, attendance, behavioral, stats } = profile;
   const fullName = [student.lastName + ",", student.firstName, student.middleName].filter(Boolean).join(" ");
   const showCounselingNotes = viewerRole === "COUNSELOR" && counselingNotes !== undefined;
+  const showSEL = selAssessments !== undefined;
   const showRisk = risk !== undefined && risk !== null;
 
   return (
@@ -96,6 +102,15 @@ export default function StudentProfileView({ profile, viewerRole, counselingNote
           <a href="#academic" className="rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700 hover:bg-slate-50">Academic</a>
           <a href="#attendance" className="rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700 hover:bg-slate-50">Attendance</a>
           <a href="#behavioral" className="rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700 hover:bg-slate-50">Behavioral</a>
+          {showSEL ? (
+            <a href="#sel" className="rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700 hover:bg-slate-50">
+              SEL
+            </a>
+          ) : (
+            <span className="rounded-full border border-dashed border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-400">
+              SEL — Counselor / Principal only
+            </span>
+          )}
           {showCounselingNotes ? (
             <a href="#counseling-notes" className="rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-700 hover:bg-slate-50">
               Counseling Notes
@@ -366,6 +381,56 @@ export default function StudentProfileView({ profile, viewerRole, counselingNote
         </section>
       )}
 
+      {/* Social-Emotional Learning — counselor + principal */}
+      {showSEL && (
+        <section id="sel" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5">
+          <header>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Social-Emotional Learning</h2>
+            <p className="mt-1 text-xs text-slate-500">
+              Counselor-managed periodic assessment. Every dimension reads as a level of
+              concern — <span className="font-medium text-slate-600">Thriving</span> is always the
+              healthy end, including for stress. Teachers and admins have no access; each read is
+              logged in the audit trail.
+              {viewerRole === "PRINCIPAL" && (
+                <> Narrative context is withheld from this view — it is counselor-only.</>
+              )}
+            </p>
+          </header>
+
+          {selAssessments!.length === 0 ? (
+            <p className="mt-4 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-sm text-slate-400">
+              No SEL assessments recorded yet.
+            </p>
+          ) : (
+            <ul className="mt-4 flex flex-col gap-3">
+              {selAssessments!.map((a) => (
+                <li key={a.id} className="rounded-xl border border-slate-200 p-4">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2 text-xs text-slate-500">
+                    <span className="font-medium text-slate-700">{a.assessorName}</span>
+                    <span>{new Date(a.assessedAt).toLocaleDateString()}</span>
+                  </div>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    <SELDimension label="Emotional well-being" level={a.emotionalWellbeing} />
+                    <SELDimension label="Stress" level={a.stressLevel} />
+                    <SELDimension label="Peer relationships" level={a.peerRelationships} />
+                    <SELDimension label="Student self-rating" level={a.selfAssessment} />
+                  </div>
+                  {a.notes && (
+                    <p className="mt-3 whitespace-pre-wrap border-t border-slate-100 pt-3 text-sm text-slate-800">
+                      {a.notes}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {viewerRole === "COUNSELOR" && (
+            <SELAssessmentForm enrollmentId={enrollment.id} studentId={student.id} />
+          )}
+        </section>
+      )}
+
       {/* Counseling Notes — counselor only */}
       {showCounselingNotes && (
         <section id="counseling-notes" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5">
@@ -407,6 +472,31 @@ export default function StudentProfileView({ profile, viewerRole, counselingNote
           </p>
         </section>
       )}
+    </div>
+  );
+}
+
+const SEL_STYLES: Record<SELLevel, { label: string; className: string }> = {
+  THRIVING: { label: "Thriving", className: "border-emerald-200 bg-emerald-50 text-emerald-700" },
+  STABLE: { label: "Stable", className: "border-sky-200 bg-sky-50 text-sky-700" },
+  AT_RISK: { label: "At risk", className: "border-amber-200 bg-amber-50 text-amber-700" },
+  CRITICAL: { label: "Critical", className: "border-rose-200 bg-rose-50 text-rose-700" },
+};
+
+function SELDimension({ label, level }: { label: string; level: SELLevel | null }) {
+  if (level === null) {
+    return (
+      <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-2.5">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</p>
+        <p className="mt-1 text-sm text-slate-400">Not given</p>
+      </div>
+    );
+  }
+  const style = SEL_STYLES[level];
+  return (
+    <div className={`rounded-lg border p-2.5 ${style.className}`}>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-70">{label}</p>
+      <p className="mt-1 text-sm font-semibold">{style.label}</p>
     </div>
   );
 }

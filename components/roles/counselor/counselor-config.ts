@@ -20,6 +20,12 @@ export const COUNSELOR_NAV: NavSection[] = [
       "Review AI-generated recommendation drafts and build formal individual, section, grade-level, or school-wide intervention plans.",
   },
   {
+    title: "Teacher Referrals",
+    href: "/counselor/referrals",
+    description:
+      "Review pending teacher referrals. Accept to pre-fill a new intervention you own, or decline with a reason shared back to the referring teacher.",
+  },
+  {
     title: "Pattern Inbox",
     href: "/counselor/patterns",
     description:
@@ -36,6 +42,18 @@ export const COUNSELOR_NAV: NavSection[] = [
     href: "/counselor/feedback",
     description:
       "Process observation notes and revision requests submitted by teachers. Acknowledge, incorporate, or discuss each item.",
+  },
+  {
+    title: "How this system works",
+    href: "/learn",
+    description:
+      "Plain-language explanation of how the risk score is computed, what each pattern rule looks for, and what the system decides versus what you decide.",
+  },
+  {
+    title: "Reports",
+    href: "/reports",
+    description:
+      "Download CSV extracts of the data behind your screens — risk rosters, intervention outcomes, attendance, and governance breakdowns.",
   },
 ];
 
