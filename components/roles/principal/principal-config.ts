@@ -30,11 +30,6 @@ export const PRINCIPAL_NAV: NavSection[] = [
       "Compare a grade level across school years — risk band distribution, intervention pipeline, completed-intervention outcomes, year-over-year drift. CSV export available.",
   },
   {
-    title: "Governance review",
-    description:
-      "Inspect audit history, outcome trends, and risk overrides with mandatory written accountability.",
-  },
-  {
     title: "How this system works",
     href: "/learn",
     description:

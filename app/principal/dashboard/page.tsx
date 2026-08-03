@@ -106,12 +106,11 @@ export default async function PrincipalDashboardPage() {
             Bias monitoring
           </h2>
           <p className="mt-1 text-xs text-slate-500">
-            Distribution by sex, SPED status, and learning modality. Disparity flags surface groups whose HIGH rate exceeds the school average by &gt;{(highRateMultiplier * 100).toFixed(0)}%.
+            Distribution by sex and learning modality. Disparity flags surface groups whose HIGH rate exceeds the school average by &gt;{(highRateMultiplier * 100).toFixed(0)}%.
           </p>
         </header>
         <div className="mt-4 grid gap-4">
           <RiskBreakdownTable title="By sex" rows={bias.bySex} highRateAlert={highRateMultiplier} />
-          <RiskBreakdownTable title="By SPED status" rows={bias.bySpedStatus} highRateAlert={highRateMultiplier} />
           <RiskBreakdownTable
             title="By learning modality"
             rows={bias.byLearningModality}

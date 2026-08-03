@@ -138,14 +138,6 @@ export default function StudentProfileView({
               <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Birth Date</span>
               <span className="font-semibold text-slate-800">{formattedDob}</span>
             </div>
-            {student.spedStatus !== "NONE" && (
-              <div className="flex justify-between items-center">
-                <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">SPED</span>
-                <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold uppercase text-amber-700 ring-1 ring-inset ring-amber-600/10">
-                  {student.spedStatus}
-                </span>
-              </div>
-            )}
           </div>
 
           {/* Consents Section */}

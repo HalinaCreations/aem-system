@@ -41,7 +41,6 @@ async function countAll() {
     attendance,
     behavioral,
     algorithmConfig,
-    spedHistory,
     riskAssessment,
     riskOverride,
     patternMatch,
@@ -67,7 +66,6 @@ async function countAll() {
     prisma.attendance.count(),
     prisma.behavioralRecord.count(),
     prisma.algorithmConfig.count(),
-    prisma.spedStatusChange.count(),
     prisma.riskAssessment.count(),
     prisma.riskOverride.count(),
     prisma.patternMatch.count(),
@@ -95,7 +93,6 @@ async function countAll() {
       Attendance: attendance,
       BehavioralRecord: behavioral,
       AlgorithmConfig: algorithmConfig,
-      SpedStatusChange: spedHistory,
     },
     wipe: {
       RiskAssessment: riskAssessment,

@@ -144,11 +144,12 @@ export default async function CaseloadPage({
                 <th className="px-3 py-2 font-medium">Section</th>
                 <th className="px-3 py-2 font-medium">Risk</th>
                 <th className="px-3 py-2 font-medium">Scored</th>
+                <th className="px-3 py-2 font-medium text-right">Action</th>
               </tr>
             </thead>
             <tbody>
               {sorted.map((r, i) => (
-                <tr key={r.studentId} className="border-t border-slate-100 hover:bg-slate-50">
+                <tr key={r.studentId} className="border-t border-slate-100 hover:bg-amber-50/20 transition-colors">
                   <td className="px-3 py-2 text-slate-400">{pagination.skip + i + 1}</td>
                   <td className="px-3 py-2">
                     <Link
@@ -166,11 +167,22 @@ export default async function CaseloadPage({
                   <td className="px-3 py-2 text-xs text-slate-400">
                     {r.computedAt ? new Date(r.computedAt).toLocaleDateString() : "—"}
                   </td>
+                  <td className="px-3 py-2 text-right">
+                    <Link
+                      href={`/counselor/students/${r.studentId}`}
+                      className="inline-flex items-center gap-1 rounded-xl bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-bold text-amber-800 hover:bg-amber-100 hover:text-amber-900 transition-all shadow-sm"
+                    >
+                      <span>View</span>
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  </td>
                 </tr>
               ))}
               {sorted.length === 0 && (
                 <tr>
-                  <td className="px-3 py-6 text-center text-sm text-slate-500" colSpan={5}>
+                  <td className="px-3 py-6 text-center text-sm text-slate-500" colSpan={6}>
                     {filtered
                       ? "No students match the current filter. Adjust or clear it above."
                       : "No students on this page."}

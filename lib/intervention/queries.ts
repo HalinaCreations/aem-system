@@ -732,3 +732,102 @@ export async function getReferralForPrefill(
     source: "REFERRAL",
   };
 }
+
+// ─── Principal approved & active interventions history query ────────────────
+
+export type ApprovedApprovalRow = {
+  id: string;
+  scope: PatternScope;
+  scopeTargetId: string;
+  scopeLabel: string;
+  type: InterventionType;
+  status: InterventionStatus;
+  ownerName: string;
+  startDate: string;
+  endDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+  participantCount: number;
+  outcomes: {
+    improving: number;
+    stable: number;
+    declining: number;
+    completed: number;
+    unset: number;
+    total: number;
+  };
+  notes: {
+    id: string;
+    noteType: string;
+    content: string;
+    authorName: string;
+    createdAt: string;
+  }[];
+};
+
+export async function getApprovedInterventionsForPrincipal(
+  schoolYearId: string,
+): Promise<ApprovedApprovalRow[]> {
+  const rows = await prisma.intervention.findMany({
+    where: {
+      schoolYearId,
+      status: { in: ["ACTIVE", "COMPLETED", "CANCELLED"] },
+    },
+    include: {
+      owner: { select: { name: true } },
+      participations: { select: { outcome: true } },
+      notes: {
+        include: { author: { select: { name: true } } },
+        orderBy: { createdAt: "desc" },
+      },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  const labelMap = await resolveScopeLabels(rows, schoolYearId);
+
+  return rows.map((r) => {
+    let improving = 0,
+      stable = 0,
+      declining = 0,
+      completed = 0,
+      unset = 0;
+    for (const p of r.participations) {
+      if (p.outcome === "IMPROVING") improving++;
+      else if (p.outcome === "STABLE") stable++;
+      else if (p.outcome === "DECLINING") declining++;
+      else if (p.outcome === "COMPLETED") completed++;
+      else unset++;
+    }
+
+    return {
+      id: r.id,
+      scope: r.scope,
+      scopeTargetId: r.scopeTargetId,
+      scopeLabel: labelMap.get(`${r.scope}:${r.scopeTargetId}`) ?? r.scopeTargetId,
+      type: r.type,
+      status: r.status,
+      ownerName: r.owner.name,
+      startDate: r.startDate.toISOString().slice(0, 10),
+      endDate: r.endDate?.toISOString().slice(0, 10) ?? null,
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt.toISOString(),
+      participantCount: r.participations.length,
+      outcomes: {
+        improving,
+        stable,
+        declining,
+        completed,
+        unset,
+        total: r.participations.length,
+      },
+      notes: r.notes.map((n) => ({
+        id: n.id,
+        noteType: n.noteType,
+        content: n.content,
+        authorName: n.author.name,
+        createdAt: n.createdAt.toISOString(),
+      })),
+    };
+  });
+}

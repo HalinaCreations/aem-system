@@ -63,7 +63,6 @@ export default async function ClassDetailPage({
           lastName: e.student.lastName,
           middleName: e.student.middleName,
           sex: e.student.sex,
-          spedStatus: e.student.spedStatus,
         }))}
         attendanceFromIso={fromIso}
         attendanceToIso={toIso}

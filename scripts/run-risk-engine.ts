@@ -29,7 +29,7 @@ async function main() {
   const enrollments = await prisma.studentEnrollment.findMany({
     where: { schoolYearId: sy.id, status: "ACTIVE" },
     include: {
-      student: { select: { id: true, spedStatus: true } },
+      student: { select: { id: true } },
       grades: true,
       attendance: true,
       behavioralRecords: true,
@@ -48,7 +48,6 @@ async function main() {
       attendance: e.attendance,
       behavioral: e.behavioralRecords,
       interventionHistory: historyByStudent.get(e.studentId) ?? EMPTY_INTERVENTION_HISTORY,
-      spedStatus: e.student.spedStatus,
       learningModality: e.learningModality,
       weights,
       thresholds,

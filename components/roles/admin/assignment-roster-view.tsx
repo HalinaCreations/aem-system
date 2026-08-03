@@ -11,7 +11,6 @@ type StudentItem = {
   middleName: string | null;
   sex: "MALE" | "FEMALE";
   learningModality: string;
-  spedStatus: string;
 };
 
 type Props = {
@@ -120,7 +119,6 @@ export default function AssignmentRosterView({ teacher, assignment, students }: 
                   <th className="px-4 py-3">Student Name</th>
                   <th className="px-4 py-3">Sex</th>
                   <th className="px-4 py-3">Learning Modality</th>
-                  <th className="px-4 py-3">SPED Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -144,20 +142,11 @@ export default function AssignmentRosterView({ teacher, assignment, students }: 
                         {s.learningModality.replace(/_/g, " ")}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 text-xs text-slate-600">
-                      {s.spedStatus !== "NONE" ? (
-                        <span className="inline-flex rounded-lg bg-amber-50 border border-amber-200 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-amber-800">
-                          {s.spedStatus}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400">—</span>
-                      )}
-                    </td>
                   </tr>
                 ))}
                 {filteredStudents.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-xs text-slate-400 italic">
+                    <td colSpan={4} className="px-4 py-8 text-center text-xs text-slate-400 italic">
                       No students match search query &quot;{search}&quot;.
                     </td>
                   </tr>

@@ -22,6 +22,7 @@ type AssignmentRow = {
   schoolYearId: string;
   section: { id: string; label: string };
   subject: { id: string; label: string } | null;
+  studentCount?: number;
 };
 
 type Props = {
@@ -249,6 +250,7 @@ export default function UserAssignmentsPanel({ user, years, assignments }: Props
                     <th className="px-4 py-3">Term / Year</th>
                     <th className="px-4 py-3">Subject</th>
                     <th className="px-4 py-3">Adviser Role</th>
+                    <th className="px-4 py-3">Enrolled Students</th>
                     <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -291,21 +293,41 @@ export default function UserAssignmentsPanel({ user, years, assignments }: Props
                           <span className="text-xs text-slate-400 font-medium">—</span>
                         )}
                       </td>
+                      <td className="px-4 py-3.5">
+                        <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                          <svg className="h-3.5 w-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                          {a.studentCount ?? 0} learner{(a.studentCount ?? 0) === 1 ? "" : "s"}
+                        </span>
+                      </td>
                       <td className="px-4 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          onClick={() => handleRemove(a.id)}
-                          disabled={pending}
-                          className="rounded-lg border border-red-200 bg-white hover:bg-red-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-red-650 hover:text-red-750 transition-colors disabled:opacity-55"
-                        >
-                          Remove
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href={`/admin/users/${user.id}/assignments/${a.id}`}
+                            className="rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-indigo-700 hover:text-indigo-800 transition-colors inline-flex items-center gap-1.5 shadow-2xs"
+                          >
+                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            View Students
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => handleRemove(a.id)}
+                            disabled={pending}
+                            className="rounded-lg border border-red-200 bg-white hover:bg-red-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-red-650 hover:text-red-750 transition-colors disabled:opacity-55"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                   {filteredAssignments.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-xs text-slate-400 italic">
+                      <td colSpan={6} className="px-4 py-8 text-center text-xs text-slate-400 italic">
                         No assignments match the selected section/subject filters.
                       </td>
                     </tr>

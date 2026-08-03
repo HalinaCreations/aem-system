@@ -6,7 +6,6 @@ import type {
   Grade,
   Attendance,
   BehavioralRecord,
-  SpedStatus,
   LearningModality,
 } from "@prisma/client";
 import type {
@@ -236,16 +235,12 @@ function computeInterventionHistoryBreakdown(
 
 // ─── Profile Sub-score ───────────────────────────────────────────────────────
 
-function computeProfileBreakdown(spedStatus: SpedStatus, learningModality: LearningModality): ProfileBreakdown {
-  // SPED status bump.
-  const spedBonus = spedStatus === "IEP" ? 20 : spedStatus === "ACCOMMODATIONS" ? 10 : 0;
-
+function computeProfileBreakdown(learningModality: LearningModality): ProfileBreakdown {
   // Modality risk: MODULAR adds difficulty (less direct supervision).
   const modalityBonus = learningModality === "MODULAR" ? 15 : learningModality === "BLENDED" ? 5 : 0;
+  const subScore = Math.min(100, modalityBonus);
 
-  const subScore = Math.min(100, spedBonus + modalityBonus);
-
-  return { spedStatus, learningModality, subScore };
+  return { learningModality, subScore };
 }
 
 // ─── Main scoring function ───────────────────────────────────────────────────
@@ -255,7 +250,6 @@ export interface ScoringInput {
   attendance: Attendance[];
   behavioral: BehavioralRecord[];
   interventionHistory: InterventionHistoryInput;
-  spedStatus: SpedStatus;
   learningModality: LearningModality;
   weights: RiskWeights;
   thresholds: RiskThresholds;
@@ -272,7 +266,7 @@ export function computeRiskScore(input: ScoringInput): ScoringResult {
   const attendance = computeAttendanceBreakdown(input.attendance);
   const behavioral = computeBehavioralBreakdown(input.behavioral);
   const interventionHistory = computeInterventionHistoryBreakdown(input.interventionHistory);
-  const profile = computeProfileBreakdown(input.spedStatus, input.learningModality);
+  const profile = computeProfileBreakdown(input.learningModality);
 
   const { weights, thresholds } = input;
   const total = weights.academic + weights.attendance + weights.behavioral + weights.interventionHistory + weights.profile;

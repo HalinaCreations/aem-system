@@ -32,7 +32,6 @@ function subScoreFor(outcomes: ParticipationOutcome[], hasActive = false): numbe
     attendance: [],
     behavioral: [],
     interventionHistory: { priorCompletedOutcomes: outcomes, hasActiveIntervention: hasActive },
-    spedStatus: "NONE",
     learningModality: "FACE_TO_FACE",
     weights: WEIGHTS,
     thresholds: THRESHOLDS,
@@ -75,12 +74,12 @@ async function main() {
   const withoutActive = computeRiskScore({
     grades: [], attendance: [], behavioral: [],
     interventionHistory: { priorCompletedOutcomes: ["DECLINING"], hasActiveIntervention: false },
-    spedStatus: "NONE", learningModality: "FACE_TO_FACE", weights: WEIGHTS, thresholds: THRESHOLDS,
+    learningModality: "FACE_TO_FACE", weights: WEIGHTS, thresholds: THRESHOLDS,
   });
   const withActive = computeRiskScore({
     grades: [], attendance: [], behavioral: [],
     interventionHistory: { priorCompletedOutcomes: ["DECLINING"], hasActiveIntervention: true },
-    spedStatus: "NONE", learningModality: "FACE_TO_FACE", weights: WEIGHTS, thresholds: THRESHOLDS,
+    learningModality: "FACE_TO_FACE", weights: WEIGHTS, thresholds: THRESHOLDS,
   });
   const neutral = withoutActive.score === withActive.score;
   if (!neutral) failures++;

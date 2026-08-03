@@ -401,8 +401,8 @@ async function ensureCohortStudents(): Promise<Map<number, DemoStudent[]>> {
 
       const studentRow = await prisma.student.upsert({
         where: { lrn },
-        update: { firstName: first, lastName: last, sex, birthDate, spedStatus },
-        create: { lrn, firstName: first, lastName: last, sex, birthDate, spedStatus },
+        update: { firstName: first, lastName: last, sex, birthDate },
+        create: { lrn, firstName: first, lastName: last, sex, birthDate },
       });
 
       // Consents — all three scopes granted for demo students.
@@ -1277,7 +1277,6 @@ async function runEngineForAllYears(yearMap: Map<string, { id: string }>) {
     const enrollments = await prisma.studentEnrollment.findMany({
       where: { schoolYearId: syId, status: "ACTIVE" },
       include: {
-        student: { select: { spedStatus: true } },
         grades: true,
         attendance: true,
         behavioralRecords: true,
@@ -1296,7 +1295,6 @@ async function runEngineForAllYears(yearMap: Map<string, { id: string }>) {
         attendance: e.attendance,
         behavioral: e.behavioralRecords,
         interventionHistory: historyByStudent.get(e.studentId) ?? EMPTY_INTERVENTION_HISTORY,
-        spedStatus: e.student.spedStatus,
         learningModality: e.learningModality,
         weights,
         thresholds,

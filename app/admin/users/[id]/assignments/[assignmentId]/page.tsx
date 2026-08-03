@@ -48,7 +48,6 @@ export default async function AdminAssignmentDetailPage({
           lastName: true,
           middleName: true,
           sex: true,
-          spedStatus: true,
         },
       },
     },
@@ -76,7 +75,6 @@ export default async function AdminAssignmentDetailPage({
         middleName: e.student.middleName,
         sex: e.student.sex,
         learningModality: e.learningModality,
-        spedStatus: e.student.spedStatus,
       }))}
     />
   );

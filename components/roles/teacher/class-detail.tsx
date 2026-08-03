@@ -17,7 +17,6 @@ type Student = {
   lastName: string;
   middleName: string | null;
   sex: "MALE" | "FEMALE";
-  spedStatus: "NONE" | "IEP" | "ACCOMMODATIONS";
 };
 
 type AttendanceMap = Record<string, Record<string, "PRESENT" | "ABSENT" | "TARDY" | "EXCUSED">>;
@@ -499,7 +498,6 @@ function RosterTab({ students }: { students: Student[] }) {
               <th className="px-4 py-3">LRN</th>
               <th className="px-4 py-3">Full Name</th>
               <th className="px-4 py-3">Sex</th>
-              <th className="px-4 py-3">SPED Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -516,24 +514,11 @@ function RosterTab({ students }: { students: Student[] }) {
                   </Link>
                 </td>
                 <td className="px-4 py-3 text-slate-600">{s.sex === "MALE" ? "Male" : "Female"}</td>
-                <td className="px-4 py-3">
-                  {s.spedStatus === "NONE" ? (
-                    <span className="text-slate-400">—</span>
-                  ) : (
-                    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
-                      s.spedStatus === "IEP"
-                        ? "border-violet-200 bg-violet-50 text-violet-800"
-                        : "border-blue-200 bg-blue-50 text-blue-800"
-                    }`}>
-                      {s.spedStatus}
-                    </span>
-                  )}
-                </td>
               </tr>
             ))}
             {visible.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-sm text-slate-400">
+                <td colSpan={4} className="px-4 py-8 text-center text-sm text-slate-400">
                   No students match &ldquo;{query}&rdquo;.
                 </td>
               </tr>

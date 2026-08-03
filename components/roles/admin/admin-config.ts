@@ -14,6 +14,12 @@ export const ADMIN_NAV: NavSection[] = [
       "Create staff accounts, suspend access, reset passwords, and assign teachers to sections.",
   },
   {
+    title: "Students",
+    href: "/admin/students",
+    description:
+      "View and search all enrolled students across sections and grade levels.",
+  },
+  {
     title: "School setup",
     href: "/admin/setup",
     description:

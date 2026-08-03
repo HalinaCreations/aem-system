@@ -1,4 +1,4 @@
-import type { LearningModality, Sex, SpedStatus } from "@prisma/client";
+import type { LearningModality, Sex } from "@prisma/client";
 import { type ParsedCsv, summarize, type ValidatedRow, type ValidationResult } from "@/lib/import/csv";
 
 export const ROSTER_COLUMNS = [
@@ -11,7 +11,6 @@ export const ROSTER_COLUMNS = [
   "gradeLevel",
   "section",
   "learningModality",
-  "spedStatus",
 ] as const;
 
 export const ROSTER_REQUIRED = [
@@ -34,7 +33,6 @@ export type RosterRow = {
   gradeLevel: string;
   section: string;
   learningModality: LearningModality;
-  spedStatus: SpedStatus;
 };
 
 function normalizeSex(v: string): Sex | null {
@@ -52,14 +50,6 @@ function normalizeModality(v: string | undefined): LearningModality {
   if (x === "ONLINE") return "ONLINE";
   if (x === "BLENDED") return "BLENDED";
   return "FACE_TO_FACE";
-}
-
-function normalizeSped(v: string | undefined): SpedStatus {
-  if (!v) return "NONE";
-  const x = v.trim().toUpperCase();
-  if (x === "IEP") return "IEP";
-  if (x === "ACCOMMODATIONS" || x === "ACCOMMODATION") return "ACCOMMODATIONS";
-  return "NONE";
 }
 
 function parseDate(v: string): Date | null {
@@ -142,7 +132,6 @@ export function validateRosterCsv(parsed: ParsedCsv): ValidationResult<RosterRow
     if (!section) errors.push("section required");
 
     const learningModality = normalizeModality(get(raw, "learningModality"));
-    const spedStatus = normalizeSped(get(raw, "spedStatus"));
 
     if (errors.length > 0) {
       return { ok: false, row: rowNum, errors, raw };
@@ -161,7 +150,6 @@ export function validateRosterCsv(parsed: ParsedCsv): ValidationResult<RosterRow
         gradeLevel,
         section,
         learningModality,
-        spedStatus,
       },
     };
   });

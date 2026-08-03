@@ -31,6 +31,8 @@ export default async function AdminUserDetailPage({
       select: {
         id: true,
         isAdviser: true,
+        sectionId: true,
+        schoolYearId: true,
         schoolYear: { select: { id: true, label: true } },
         section: { select: { id: true, gradeLevel: true, name: true } },
         subject: { select: { id: true, code: true, name: true } },
@@ -38,6 +40,23 @@ export default async function AdminUserDetailPage({
       orderBy: [{ schoolYear: { startDate: "desc" } }, { section: { name: "asc" } }],
     }),
   ]);
+
+  const uniqueSectionIds = [...new Set(assignments.map((a) => a.sectionId))];
+  const uniqueYearIds = [...new Set(assignments.map((a) => a.schoolYearId))];
+
+  const counts = uniqueSectionIds.length > 0 && uniqueYearIds.length > 0
+    ? await prisma.studentEnrollment.groupBy({
+        by: ["sectionId", "schoolYearId"],
+        where: {
+          sectionId: { in: uniqueSectionIds },
+          schoolYearId: { in: uniqueYearIds },
+          status: "ACTIVE",
+        },
+        _count: { _all: true },
+      })
+    : [];
+
+  const countMap = new Map(counts.map((c) => [`${c.sectionId}_${c.schoolYearId}`, c._count._all]));
 
   return (
     <UserAssignmentsPanel
@@ -50,6 +69,7 @@ export default async function AdminUserDetailPage({
         schoolYearId: a.schoolYear.id,
         section: { id: a.section.id, label: `${a.section.gradeLevel} · ${a.section.name}` },
         subject: a.subject ? { id: a.subject.id, label: `${a.subject.code} — ${a.subject.name}` } : null,
+        studentCount: countMap.get(`${a.sectionId}_${a.schoolYearId}`) ?? 0,
       }))}
     />
   );

@@ -52,7 +52,6 @@ export interface InterventionHistoryBreakdown {
 }
 
 export interface ProfileBreakdown {
-  spedStatus: string;
   learningModality: string;
   subScore: number;
 }

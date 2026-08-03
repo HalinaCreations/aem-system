@@ -105,7 +105,7 @@ export default function ImportWizard({ years, defaultYearId }: Props) {
               ]}
               previewAction={previewRosterAction}
               commitAction={commitRosterAction}
-              previewHeaders={["Row", "LRN", "Name", "Sex", "Birth", "Grade · Section", "Modality", "SPED"]}
+              previewHeaders={["Row", "LRN", "Name", "Sex", "Birth", "Grade · Section", "Modality"]}
               renderRow={(r) => [
                 <td key="row" className="px-2 py-2 text-slate-500">{r.row}</td>,
                 <td key="lrn" className="px-2 py-2 font-mono">{r.data.lrn}</td>,
@@ -114,7 +114,6 @@ export default function ImportWizard({ years, defaultYearId }: Props) {
                 <td key="birth" className="px-2 py-2">{r.data.birthDate.toISOString().slice(0, 10)}</td>,
                 <td key="grade" className="px-2 py-2">{r.data.gradeLevel} · {r.data.section}</td>,
                 <td key="mod" className="px-2 py-2">{r.data.learningModality}</td>,
-                <td key="sped" className="px-2 py-2">{r.data.spedStatus}</td>,
               ]}
               commitButtonLabel={(n, label) => `Commit ${n} row(s) to ${label}`}
               renderSuccess={(c) => (
