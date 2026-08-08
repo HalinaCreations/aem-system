@@ -21,6 +21,11 @@ export async function proxy(request: NextRequest) {
   if (PUBLIC_PATHS.has(pathname)) return NextResponse.next();
   if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) return NextResponse.next();
 
+  // Allow static files in the public directory to be accessed without authentication
+  if (/\.(?:png|jpg|jpeg|gif|svg|ico|webp)$/i.test(pathname)) {
+    return NextResponse.next();
+  }
+
   const session = await auth();
 
   if (!session?.user) {

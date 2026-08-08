@@ -4,7 +4,7 @@ export const COUNSELOR_BADGE = "Counselor workspace";
 export const COUNSELOR_TITLE = "Student support and intervention hub";
 export const COUNSELOR_DESCRIPTION =
   "Own the intervention lifecycle, maintain counseling context, and act on risk signals with accountable human decisions.";
-export const COUNSELOR_THEME: ThemeName = "amber";
+export const COUNSELOR_THEME: ThemeName = "emerald";
 
 export const COUNSELOR_NAV: NavSection[] = [
   {

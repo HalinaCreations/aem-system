@@ -128,7 +128,6 @@ export async function whatIfRiskAction(input: unknown): Promise<WhatIfResult> {
       // control because a knob that never moves the score teaches the wrong thing.
       hasActiveIntervention: false,
     },
-    spedStatus: data.spedStatus,
     learningModality: data.learningModality,
     weights,
     thresholds,

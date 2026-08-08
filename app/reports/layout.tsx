@@ -1,31 +1,79 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
-import { requireSession, roleLandingPath } from "@/lib/session";
+import { requireSession } from "@/lib/session";
+import RoleShell, { type NavSection } from "@/components/shell/role-shell";
 
-/**
- * Like /learn, this sits outside the role prefixes — every role has reports,
- * they just get different ones. Which reports appear, and what rows they
- * contain, is decided by the registry rather than by the URL.
- */
+import {
+  TEACHER_BADGE,
+  TEACHER_TITLE,
+  TEACHER_THEME,
+  TEACHER_NAV,
+} from "@/components/roles/teacher/teacher-config";
+import {
+  COUNSELOR_BADGE,
+  COUNSELOR_TITLE,
+  COUNSELOR_THEME,
+  COUNSELOR_NAV,
+} from "@/components/roles/counselor/counselor-config";
+import {
+  PRINCIPAL_BADGE,
+  PRINCIPAL_TITLE,
+  PRINCIPAL_THEME,
+  PRINCIPAL_NAV,
+} from "@/components/roles/principal/principal-config";
+import {
+  ADMIN_BADGE,
+  ADMIN_TITLE,
+  ADMIN_THEME,
+  ADMIN_NAV,
+} from "@/components/roles/admin/admin-config";
+
 export default async function ReportsLayout({ children }: { children: ReactNode }) {
   const session = await requireSession();
+  const role = session.user.role;
+
+  let badge = "";
+  let title = "";
+  let theme: "indigo" | "emerald" | "amber" | "rose" = "indigo";
+  let navSections: NavSection[] = [];
+  let roleSlug: "teacher" | "counselor" | "principal" | "admin" = "teacher";
+
+  if (role === "TEACHER") {
+    badge = TEACHER_BADGE;
+    title = TEACHER_TITLE;
+    theme = TEACHER_THEME;
+    navSections = TEACHER_NAV;
+    roleSlug = "teacher";
+  } else if (role === "COUNSELOR") {
+    badge = COUNSELOR_BADGE;
+    title = COUNSELOR_TITLE;
+    theme = COUNSELOR_THEME;
+    navSections = COUNSELOR_NAV;
+    roleSlug = "counselor";
+  } else if (role === "PRINCIPAL") {
+    badge = PRINCIPAL_BADGE;
+    title = PRINCIPAL_TITLE;
+    theme = PRINCIPAL_THEME;
+    navSections = PRINCIPAL_NAV;
+    roleSlug = "principal";
+  } else if (role === "ADMIN") {
+    badge = ADMIN_BADGE;
+    title = ADMIN_TITLE;
+    theme = ADMIN_THEME;
+    navSections = ADMIN_NAV;
+    roleSlug = "admin";
+  }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 px-4 py-4 md:px-6">
-          <Link href="/reports" className="text-sm font-semibold tracking-tight text-slate-900">
-            Reports
-          </Link>
-          <Link
-            href={roleLandingPath(session.user.role)}
-            className="text-xs font-medium text-slate-500 transition-colors hover:text-slate-900"
-          >
-            ← Back to workspace
-          </Link>
-        </div>
-      </header>
-      <main className="mx-auto max-w-3xl px-4 py-8 md:px-6">{children}</main>
-    </div>
+    <RoleShell
+      role={roleSlug}
+      badge={badge}
+      title={title}
+      theme={theme}
+      navSections={navSections}
+    >
+      <div className="w-full">
+        {children}
+      </div>
+    </RoleShell>
   );
 }

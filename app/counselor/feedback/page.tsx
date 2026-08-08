@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/session";
 import { getActiveSchoolYear } from "@/lib/active-year";
 import { getOpenFeedbackForCounselor } from "@/lib/intervention/queries";
 import FeedbackDisposition from "@/components/counselor/feedback-disposition";
+import PageHeader from "@/components/shell/page-header";
 
 const NOTE_TYPE_LABEL: Record<string, string> = {
   OBSERVATION: "Observation",
@@ -37,13 +38,12 @@ export default async function CounselorFeedbackPage() {
   const queue = await getOpenFeedbackForCounselor(session.user.id, sy.id);
 
   return (
-    <div className="flex flex-col gap-6">
-      <header>
-        <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Feedback Queue</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          {queue.length} open note{queue.length === 1 ? "" : "s"} on interventions you own. Acknowledge to record without changing the plan. Incorporate writes a revision linked to the note. Dismiss to close without action.
-        </p>
-      </header>
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        label="Student Support"
+        title="Feedback Queue"
+        description={`${queue.length} open note${queue.length === 1 ? "" : "s"} on interventions you own. Acknowledge to record without changing the plan. Incorporate writes a revision linked to the note. Dismiss to close without action.`}
+      />
 
       {queue.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm text-slate-400">

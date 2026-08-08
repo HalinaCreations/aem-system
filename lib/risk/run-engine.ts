@@ -65,7 +65,7 @@ export async function runRiskEngine(
       ...(enrollmentId ? { id: enrollmentId } : {}),
     },
     include: {
-      student: { select: { spedStatus: true, firstName: true, lastName: true } },
+      student: { select: { firstName: true, lastName: true } },
       grades: true,
       attendance: true,
       behavioralRecords: true,
@@ -94,7 +94,6 @@ export async function runRiskEngine(
       attendance: enrollment.attendance,
       behavioral: enrollment.behavioralRecords,
       interventionHistory: historyByStudent.get(enrollment.studentId) ?? EMPTY_INTERVENTION_HISTORY,
-      spedStatus: enrollment.student.spedStatus,
       learningModality: enrollment.learningModality,
       weights,
       thresholds,

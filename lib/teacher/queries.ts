@@ -75,7 +75,6 @@ export async function getTeacherClassDetail(
           lastName: true,
           middleName: true,
           sex: true,
-          spedStatus: true,
         },
       },
     },

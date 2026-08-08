@@ -4,7 +4,7 @@ export const ADMIN_BADGE = "Admin workspace";
 export const ADMIN_TITLE = "Administrative control center";
 export const ADMIN_DESCRIPTION =
   "Manage school-year setup, user access, import pipelines, and governance settings without exposing counseling details.";
-export const ADMIN_THEME: ThemeName = "indigo";
+export const ADMIN_THEME: ThemeName = "emerald";
 
 export const ADMIN_NAV: NavSection[] = [
   {
@@ -12,6 +12,12 @@ export const ADMIN_NAV: NavSection[] = [
     href: "/admin/users",
     description:
       "Create staff accounts, suspend access, reset passwords, and assign teachers to sections.",
+  },
+  {
+    title: "Students",
+    href: "/admin/students",
+    description:
+      "View and search all enrolled students across sections and grade levels.",
   },
   {
     title: "School setup",

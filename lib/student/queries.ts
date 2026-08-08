@@ -18,7 +18,6 @@ import type {
   Role,
   SELLevel,
   Sex,
-  SpedStatus,
 } from "@prisma/client";
 
 // ─── Caseload list ──────────────────────────────────────────────────────────
@@ -31,7 +30,6 @@ export type CaseloadRow = {
   lastName: string;
   middleName: string | null;
   sex: Sex;
-  spedStatus: SpedStatus;
   sectionName: string;
   gradeLevel: string;
   absenceRate: number; // 0..1, computed on the fly from Attendance
@@ -44,7 +42,6 @@ type CaseloadFilters = {
   search?: string | null;
   sectionId?: string | null;
   gradeLevel?: string | null;
-  spedStatus?: string | null;
 };
 
 function buildCaseloadWhere(schoolYearId: string, f: CaseloadFilters = {}): Prisma.StudentEnrollmentWhereInput {
@@ -63,7 +60,6 @@ function buildCaseloadWhere(schoolYearId: string, f: CaseloadFilters = {}): Pris
       { lrn: { contains: search } },
     ];
   }
-  if (f.spedStatus) studentFilter.spedStatus = f.spedStatus as Prisma.StudentWhereInput["spedStatus"];
   if (Object.keys(studentFilter).length > 0) where.student = studentFilter;
   return where;
 }
@@ -78,7 +74,7 @@ export async function getCaseload(
       student: {
         select: {
           id: true, lrn: true, firstName: true, lastName: true, middleName: true,
-          sex: true, spedStatus: true,
+          sex: true,
         },
       },
       section: { select: { name: true, gradeLevel: true } },
@@ -102,7 +98,6 @@ export async function getCaseload(
       lastName: e.student.lastName,
       middleName: e.student.middleName,
       sex: e.student.sex,
-      spedStatus: e.student.spedStatus,
       sectionName: e.section.name,
       gradeLevel: e.section.gradeLevel,
       totalAttendanceDays: total,
@@ -133,7 +128,6 @@ export type StudentProfileData = {
     middleName: string | null;
     sex: Sex;
     birthDate: string; // ISO
-    spedStatus: SpedStatus;
     guardianName: string | null;
     guardianContact: string | null;
   };
@@ -188,7 +182,19 @@ export async function getStudentProfile(
   const enrollment = await prisma.studentEnrollment.findUnique({
     where: { studentId_schoolYearId: { studentId, schoolYearId } },
     include: {
-      student: true,
+      student: {
+        select: {
+          id: true,
+          lrn: true,
+          firstName: true,
+          lastName: true,
+          middleName: true,
+          sex: true,
+          birthDate: true,
+          guardianName: true,
+          guardianContact: true,
+        },
+      },
       section: { select: { name: true, gradeLevel: true } },
       schoolYear: { select: { label: true } },
     },
@@ -264,7 +270,6 @@ export async function getStudentProfile(
       middleName: enrollment.student.middleName,
       sex: enrollment.student.sex,
       birthDate: enrollment.student.birthDate.toISOString(),
-      spedStatus: enrollment.student.spedStatus,
       guardianName: enrollment.student.guardianName,
       guardianContact: enrollment.student.guardianContact,
     },

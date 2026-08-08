@@ -37,7 +37,7 @@ export async function generateRiskNarrative(input: RiskNarrativeInput): Promise<
     `- Academic ${factors.academic}: GWA=${a.gwa ?? "n/a"}, failing subjects=${a.failingSubjectCount}, quarter trend slope=${a.trendSlope.toFixed(2)}`,
     `- Attendance ${factors.attendance}: ${at.absences}/${at.totalDays} absences (${(at.absenceRate * 100).toFixed(1)}%), tardies=${at.tardies}, longest consecutive absences=${at.consecutiveAbsences}`,
     `- Behavioral ${factors.behavioral}: ${b.totalIncidents} incidents (HIGH=${b.highCount}, MOD=${b.moderateCount}, LOW=${b.lowCount})`,
-    `- Profile ${factors.profile}: SPED=${p.spedStatus}, modality=${p.learningModality}`,
+    `- Profile ${factors.profile}: modality=${p.learningModality}`,
     ``,
     `Write the explanation now. No headings, no bullet points, just the prose.`,
   ].join("\n");

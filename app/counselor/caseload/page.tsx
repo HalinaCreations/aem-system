@@ -10,7 +10,9 @@ import { RiskBadge } from "@/components/shell/explainability-panel";
 import { paginate, parsePageParam, PAGE_SIZE } from "@/lib/pagination";
 import { PaginationBar } from "@/components/shell/pagination-bar";
 import PrewarmCaseloadButton from "@/components/counselor/prewarm-caseload-button";
-import { ListToolbar, toForwardParams, type FilterSpec } from "@/components/shell/list-toolbar";
+import { ListToolbar } from "@/components/shell/list-toolbar";
+import { toForwardParams, type FilterSpec } from "@/lib/toolbar-utils";
+import PageHeader from "@/components/shell/page-header";
 
 const BAND_OPTIONS = [
   { value: "HIGH", label: "HIGH" },
@@ -99,35 +101,38 @@ export default async function CaseloadPage({
   const filtered = pagination.total !== summary.total;
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Caseload Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            {summary.total} student{summary.total === 1 ? "" : "s"} enrolled in {sy.label}.{" "}
-            {summary.scored === 0
-              ? "No risk scores computed yet — ask the admin to run the engine."
-              : `${summary.scored} scored · ${summary.high} HIGH · ${summary.moderate} MODERATE.`}
-            {filtered && (
-              <span className="ml-1 text-amber-700">
-                ({pagination.total} match{pagination.total === 1 ? "" : "es"} the current filter)
-              </span>
-            )}
-          </p>
-          <p className="mt-1 text-xs text-slate-400">
-            Click a student to open the full academic + attendance + behavioral profile. For a global view of the highest-risk students across the whole caseload, open the Pattern Inbox.
-          </p>
-        </div>
-        <ListToolbar
-          basePath="/counselor/caseload"
-          searchPlaceholder="Search name or LRN…"
-          searchValue={search}
-          filters={filters}
-        />
-        {summary.scored > 0 && (
-          <PrewarmCaseloadButton schoolYearId={sy.id} page={pagination.page} />
-        )}
-      </header>
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        label="Student Support"
+        title="Caseload Dashboard"
+        description={
+          <>
+            <p>
+              {summary.total} student{summary.total === 1 ? "" : "s"} enrolled in {sy.label}.{" "}
+              {summary.scored === 0
+                ? "No risk scores computed yet — ask the admin to run the engine."
+                : `${summary.scored} scored · ${summary.high} HIGH · ${summary.moderate} MODERATE.`}
+              {filtered && (
+                <span className="ml-1 text-amber-600 font-semibold">
+                  ({pagination.total} match{pagination.total === 1 ? "" : "es"} the current filter)
+                </span>
+              )}
+            </p>
+            <p className="mt-1 text-xs text-slate-400">
+              Click a student to open the full academic + attendance + behavioral profile. For a global view of the highest-risk students across the whole caseload, open the Pattern Inbox.
+            </p>
+          </>
+        }
+      />
+      <ListToolbar
+        basePath="/counselor/caseload"
+        searchPlaceholder="Search name or LRN…"
+        searchValue={search}
+        filters={filters}
+      />
+      {summary.scored > 0 && (
+        <PrewarmCaseloadButton schoolYearId={sy.id} page={pagination.page} />
+      )}
 
       <div className="rounded-2xl border border-slate-200 bg-white p-2">
         <div className="overflow-x-auto">
@@ -139,11 +144,12 @@ export default async function CaseloadPage({
                 <th className="px-3 py-2 font-medium">Section</th>
                 <th className="px-3 py-2 font-medium">Risk</th>
                 <th className="px-3 py-2 font-medium">Scored</th>
+                <th className="px-3 py-2 font-medium text-right">Action</th>
               </tr>
             </thead>
             <tbody>
               {sorted.map((r, i) => (
-                <tr key={r.studentId} className="border-t border-slate-100 hover:bg-slate-50">
+                <tr key={r.studentId} className="border-t border-slate-100 hover:bg-amber-50/20 transition-colors">
                   <td className="px-3 py-2 text-slate-400">{pagination.skip + i + 1}</td>
                   <td className="px-3 py-2">
                     <Link
@@ -161,11 +167,22 @@ export default async function CaseloadPage({
                   <td className="px-3 py-2 text-xs text-slate-400">
                     {r.computedAt ? new Date(r.computedAt).toLocaleDateString() : "—"}
                   </td>
+                  <td className="px-3 py-2 text-right">
+                    <Link
+                      href={`/counselor/students/${r.studentId}`}
+                      className="inline-flex items-center gap-1 rounded-xl bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-bold text-amber-800 hover:bg-amber-100 hover:text-amber-900 transition-all shadow-sm"
+                    >
+                      <span>View</span>
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  </td>
                 </tr>
               ))}
               {sorted.length === 0 && (
                 <tr>
-                  <td className="px-3 py-6 text-center text-sm text-slate-500" colSpan={5}>
+                  <td className="px-3 py-6 text-center text-sm text-slate-500" colSpan={6}>
                     {filtered
                       ? "No students match the current filter. Adjust or clear it above."
                       : "No students on this page."}

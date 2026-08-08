@@ -170,7 +170,6 @@ export async function commitRosterAction(formData: FormData): Promise<RosterComm
           middleName: v.data.middleName,
           sex: v.data.sex,
           birthDate: v.data.birthDate,
-          spedStatus: v.data.spedStatus,
         },
         create: {
           lrn: v.data.lrn,
@@ -179,7 +178,6 @@ export async function commitRosterAction(formData: FormData): Promise<RosterComm
           middleName: v.data.middleName,
           sex: v.data.sex,
           birthDate: v.data.birthDate,
-          spedStatus: v.data.spedStatus,
         },
       });
       if (!beforeStudent) createdStudents++;

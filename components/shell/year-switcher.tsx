@@ -4,6 +4,8 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { switchSchoolYearAction } from "@/app/actions/school-year";
 
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+
 type Year = { id: string; label: string; isActive: boolean };
 
 export default function YearSwitcher({
@@ -16,8 +18,7 @@ export default function YearSwitcher({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  const onChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const id = e.target.value;
+  const handleValueChange = (id: string) => {
     startTransition(async () => {
       const result = await switchSchoolYearAction(id);
       if (result.ok) router.refresh();
@@ -25,20 +26,25 @@ export default function YearSwitcher({
   };
 
   return (
-    <select
-      aria-label="School year"
+    <Select
       value={selectedId ?? ""}
-      onChange={onChange}
-      disabled={pending || years.length === 0}
-      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 disabled:opacity-60"
+      onValueChange={handleValueChange}
     >
-      {years.length === 0 && <option value="">No years</option>}
-      {years.map((y) => (
-        <option key={y.id} value={y.id}>
-          {y.label}
-          {y.isActive ? " · current" : ""}
-        </option>
-      ))}
-    </select>
+      <SelectTrigger
+        disabled={pending || years.length === 0}
+        className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1 text-xs font-semibold text-slate-700 disabled:opacity-60 w-[140px]"
+      >
+        <SelectValue placeholder="No years" />
+      </SelectTrigger>
+      <SelectContent>
+        {years.length === 0 && <SelectItem value="">No years</SelectItem>}
+        {years.map((y) => (
+          <SelectItem key={y.id} value={y.id}>
+            {y.label}
+            {y.isActive ? " (Active)" : ""}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

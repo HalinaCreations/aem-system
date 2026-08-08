@@ -63,7 +63,6 @@ export default async function ClassDetailPage({
           lastName: e.student.lastName,
           middleName: e.student.middleName,
           sex: e.student.sex,
-          spedStatus: e.student.spedStatus,
         }))}
         attendanceFromIso={fromIso}
         attendanceToIso={toIso}
@@ -89,6 +88,7 @@ export default async function ClassDetailPage({
         }))}
         sectionRisk={sectionRisk.map((r) => ({
           enrollmentId: r.enrollmentId,
+          studentId: r.studentId,
           firstName: r.firstName,
           lastName: r.lastName,
           riskScore: r.riskScore,

@@ -10,6 +10,12 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --shadow-sm: none;
+  --shadow: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
+  --shadow-2xl: none;
 }
 
 body {
@@ -47,3 +53,56 @@ textarea.input-field {
   height: auto;
   padding: 0.5rem 0.75rem;
 }
+
+/* Explicitly disable all box shadow utilities for cards and containers */
+.shadow-sm, .shadow, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl {
+  box-shadow: none !important;
+}
+
+/* Global button override: matches login page indigo/blue gradient button */
+button[type="submit"],
+button.bg-emerald-600,
+button.bg-emerald-700,
+button.bg-slate-900,
+button.bg-slate-800,
+button.bg-indigo-600,
+button.bg-indigo-700,
+a.bg-slate-900,
+a.bg-emerald-600,
+a.bg-indigo-600 {
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+}
+
+button[type="submit"]:hover,
+button.bg-emerald-600:hover,
+button.bg-emerald-700:hover,
+button.bg-slate-900:hover,
+button.bg-slate-800:hover,
+button.bg-indigo-600:hover,
+button.bg-indigo-700:hover,
+a.bg-slate-900:hover,
+a.bg-emerald-600:hover,
+a.bg-indigo-600:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%) !important;
+  color: #ffffff !important;
+}
+
+button[type="submit"]:disabled,
+button.bg-emerald-600:disabled,
+button.bg-emerald-700:disabled,
+button.bg-slate-900:disabled,
+button.bg-slate-800:disabled,
+button.bg-indigo-600:disabled,
+button.bg-indigo-700:disabled,
+a.bg-slate-900:disabled,
+a.bg-emerald-600:disabled,
+a.bg-indigo-600:disabled {
+  background: #cbd5e1 !important;
+  color: #94a3b8 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6 !important;
+}
+
+

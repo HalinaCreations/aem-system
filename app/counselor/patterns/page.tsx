@@ -8,6 +8,8 @@ import {
 import PatternDisposition from "@/components/counselor/pattern-disposition";
 import { paginate, parsePageParam, PAGE_SIZE } from "@/lib/pagination";
 import { PaginationBar } from "@/components/shell/pagination-bar";
+import PageHeader from "@/components/shell/page-header";
+import SystemWorksLink from "@/components/shell/system-works-link";
 
 const SCOPE_LABEL: Record<string, string> = {
   STUDENT: "Individual",
@@ -54,19 +56,20 @@ export default async function CounselorPatternInboxPage({
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <header>
-        <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Pattern Inbox</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          {total} open pattern match{total === 1 ? "" : "es"} across all scopes in {sy.label}. Resolve once you&apos;ve acted on a pattern; dismiss to clear without action. Both leave an audit trail.
-        </p>
-        <Link
-          href="/learn/patterns"
-          className="mt-2 inline-block text-xs font-medium text-slate-500 underline underline-offset-2 transition-colors hover:text-slate-900"
-        >
-          What does each rule look for?
-        </Link>
-      </header>
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        label="Algorithmic Insights"
+        title="Pattern Inbox"
+        description={`${total} open pattern match${total === 1 ? "" : "es"} across all scopes in ${sy.label}. Resolve once you've acted on a pattern; dismiss to clear without action. Both leave an audit trail.`}
+        actions={
+          <SystemWorksLink
+            tab="patterns"
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+          >
+            What does each rule look for?
+          </SystemWorksLink>
+        }
+      />
 
       {total === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm text-slate-400">

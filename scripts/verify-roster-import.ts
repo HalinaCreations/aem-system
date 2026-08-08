@@ -101,7 +101,6 @@ async function main() {
           middleName: v.data.middleName,
           sex: v.data.sex,
           birthDate: v.data.birthDate,
-          spedStatus: v.data.spedStatus,
         },
         create: {
           lrn: v.data.lrn,
@@ -110,7 +109,6 @@ async function main() {
           middleName: v.data.middleName,
           sex: v.data.sex,
           birthDate: v.data.birthDate,
-          spedStatus: v.data.spedStatus,
         },
       });
       if (!beforeStudent) createdStudents++;

@@ -72,7 +72,7 @@ const riskRoster: ReportDef = {
         ...(sectionIds ? { sectionId: { in: sectionIds } } : {}),
       },
       include: {
-        student: { select: { lrn: true, firstName: true, lastName: true, spedStatus: true } },
+        student: { select: { lrn: true, firstName: true, lastName: true } },
         section: { select: { name: true, gradeLevel: true } },
         riskAssessments: {
           orderBy: { computedAt: "desc" },
@@ -98,7 +98,6 @@ const riskRoster: ReportDef = {
           `${e.student.lastName}, ${e.student.firstName}`,
           e.section.gradeLevel,
           e.section.name,
-          e.student.spedStatus,
           latest ? latest.score : "",
           latest ? latest.band : "Not scored",
           override ? override.overrideBand : "",
@@ -241,7 +240,7 @@ const biasBreakdown: ReportDef = {
     const enrollments = await prisma.studentEnrollment.findMany({
       where: { schoolYearId, status: "ACTIVE" },
       include: {
-        student: { select: { sex: true, spedStatus: true } },
+        student: { select: { sex: true } },
         riskAssessments: { orderBy: { computedAt: "desc" }, take: 1, select: { band: true } },
       },
     });
@@ -249,7 +248,7 @@ const biasBreakdown: ReportDef = {
     type Bucket = { LOW: number; MODERATE: number; HIGH: number; unscored: number };
     const groups = new Map<string, Bucket>();
     const bump = (dimension: string, value: string, band: string | undefined) => {
-      const key = `${dimension} ${value}`;
+      const key = `${dimension} ${value}`;
       const b = groups.get(key) ?? { LOW: 0, MODERATE: 0, HIGH: 0, unscored: 0 };
       if (band === "LOW" || band === "MODERATE" || band === "HIGH") b[band]++;
       else b.unscored++;
@@ -259,7 +258,6 @@ const biasBreakdown: ReportDef = {
     for (const e of enrollments) {
       const band = e.riskAssessments[0]?.band;
       bump("Sex", e.student.sex, band);
-      bump("SPED status", e.student.spedStatus, band);
       bump("Learning modality", e.learningModality, band);
     }
 
@@ -292,7 +290,7 @@ const biasBreakdown: ReportDef = {
 
 const HEADERS = {
   riskRoster: [
-    "LRN", "Student", "Grade", "Section", "SPED status",
+    "LRN", "Student", "Grade", "Section",
     "Risk score", "Band", "Override band", "Override justification", "Scored on",
   ],
   interventionOutcomes: [

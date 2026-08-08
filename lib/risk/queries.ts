@@ -372,7 +372,6 @@ type EnrollmentWithBand = {
   sectionId: string;
   sectionName: string;
   sex: string;
-  spedStatus: string;
   learningModality: string;
 };
 
@@ -382,7 +381,7 @@ async function loadEnrollmentsWithLatestBand(
   const rows = await prisma.studentEnrollment.findMany({
     where: { schoolYearId, status: "ACTIVE" },
     include: {
-      student: { select: { sex: true, spedStatus: true } },
+      student: { select: { sex: true } },
       section: { select: { id: true, name: true, gradeLevel: true } },
       riskAssessments: {
         orderBy: { computedAt: "desc" },
@@ -397,7 +396,6 @@ async function loadEnrollmentsWithLatestBand(
     sectionId: r.section.id,
     sectionName: `${r.section.gradeLevel} · ${r.section.name}`,
     sex: r.student.sex,
-    spedStatus: r.student.spedStatus,
     learningModality: r.learningModality,
   }));
 }
@@ -436,7 +434,6 @@ export async function getRiskBreakdownBySection(
 
 export type BiasBreakdowns = {
   bySex: BreakdownGroup[];
-  bySpedStatus: BreakdownGroup[];
   byLearningModality: BreakdownGroup[];
 };
 
@@ -444,10 +441,6 @@ export async function getBiasBreakdowns(schoolYearId: string): Promise<BiasBreak
   const rows = await loadEnrollmentsWithLatestBand(schoolYearId);
   return {
     bySex: groupBreakdown(rows, (r) => ({ key: r.sex, label: r.sex })),
-    bySpedStatus: groupBreakdown(rows, (r) => ({
-      key: r.spedStatus,
-      label: r.spedStatus.replace(/_/g, " "),
-    })),
     byLearningModality: groupBreakdown(rows, (r) => ({
       key: r.learningModality,
       label: r.learningModality.replace(/_/g, " "),

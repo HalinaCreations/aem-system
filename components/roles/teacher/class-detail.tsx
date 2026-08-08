@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { recordAttendanceAction } from "@/app/actions/teacher/attendance";
 import { recordBulkGradesAction } from "@/app/actions/teacher/grades";
@@ -16,7 +17,6 @@ type Student = {
   lastName: string;
   middleName: string | null;
   sex: "MALE" | "FEMALE";
-  spedStatus: "NONE" | "IEP" | "ACCOMMODATIONS";
 };
 
 type AttendanceMap = Record<string, Record<string, "PRESENT" | "ABSENT" | "TARDY" | "EXCUSED">>;
@@ -44,6 +44,7 @@ type Behavioral = {
 
 type StudentRisk = {
   enrollmentId: string;
+  studentId: string;
   firstName: string;
   lastName: string;
   riskScore: number | null;
@@ -426,7 +427,12 @@ function RiskTab({ rows, sectionLabel }: { rows: StudentRisk[]; sectionLabel: st
               return (
                 <li key={r.enrollmentId} className="flex items-center gap-3 py-2">
                   <span className="w-5 text-right text-xs tabular-nums text-slate-400">{i + 1}</span>
-                  <span className="flex-1 text-sm text-slate-800">{r.lastName}, {r.firstName}</span>
+                  <Link
+                    href={`/teacher/students/${r.studentId}`}
+                    className="flex-1 text-sm text-slate-800 hover:text-emerald-700 hover:underline"
+                  >
+                    {r.lastName}, {r.firstName}
+                  </Link>
                   <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${cfg.badge}`}>
                     <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
                     {band}
@@ -492,7 +498,6 @@ function RosterTab({ students }: { students: Student[] }) {
               <th className="px-4 py-3">LRN</th>
               <th className="px-4 py-3">Full Name</th>
               <th className="px-4 py-3">Sex</th>
-              <th className="px-4 py-3">SPED Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -500,28 +505,20 @@ function RosterTab({ students }: { students: Student[] }) {
               <tr key={s.enrollmentId} className="transition-colors hover:bg-slate-50/60">
                 <td className="px-4 py-3 tabular-nums text-slate-400">{i + 1}</td>
                 <td className="px-4 py-3 font-mono text-xs text-slate-600">{s.lrn}</td>
-                <td className="px-4 py-3 font-medium text-slate-900">
-                  {s.lastName}, {s.firstName}{s.middleName ? ` ${s.middleName[0]}.` : ""}
+                <td className="px-4 py-3 font-medium">
+                  <Link
+                    href={`/teacher/students/${s.studentId}`}
+                    className="text-slate-900 hover:text-emerald-700 hover:underline"
+                  >
+                    {s.lastName}, {s.firstName}{s.middleName ? ` ${s.middleName[0]}.` : ""}
+                  </Link>
                 </td>
                 <td className="px-4 py-3 text-slate-600">{s.sex === "MALE" ? "Male" : "Female"}</td>
-                <td className="px-4 py-3">
-                  {s.spedStatus === "NONE" ? (
-                    <span className="text-slate-400">—</span>
-                  ) : (
-                    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
-                      s.spedStatus === "IEP"
-                        ? "border-violet-200 bg-violet-50 text-violet-800"
-                        : "border-blue-200 bg-blue-50 text-blue-800"
-                    }`}>
-                      {s.spedStatus}
-                    </span>
-                  )}
-                </td>
               </tr>
             ))}
             {visible.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-sm text-slate-400">
+                <td colSpan={4} className="px-4 py-8 text-center text-sm text-slate-400">
                   No students match &ldquo;{query}&rdquo;.
                 </td>
               </tr>
@@ -764,8 +761,13 @@ function AttendanceTab({
                     }`}
                   >
                     <td className="px-4 py-3 tabular-nums text-slate-400">{i + 1}</td>
-                    <td className="px-4 py-3 font-medium text-slate-900">
-                      {s.lastName}, {s.firstName}
+                    <td className="px-4 py-3 font-medium">
+                      <Link
+                        href={`/teacher/students/${s.studentId}`}
+                        className="text-slate-900 hover:text-emerald-700 hover:underline"
+                      >
+                        {s.lastName}, {s.firstName}
+                      </Link>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1.5">
@@ -1197,8 +1199,13 @@ function GradebookTab({
               return (
                 <tr key={s.enrollmentId} className="align-middle hover:bg-slate-50/60">
                   <td className="px-4 py-3 tabular-nums text-slate-400">{i + 1}</td>
-                  <td className="px-4 py-3 font-medium text-slate-900 whitespace-nowrap">
-                    {s.lastName}, {s.firstName}
+                  <td className="px-4 py-3 font-medium whitespace-nowrap">
+                    <Link
+                      href={`/teacher/students/${s.studentId}`}
+                      className="text-slate-900 hover:text-emerald-700 hover:underline"
+                    >
+                      {s.lastName}, {s.firstName}
+                    </Link>
                   </td>
                   {/* Existing saved cells */}
                   {columns.map((col) => {
@@ -1502,8 +1509,17 @@ function BehavioralTab({
               <li key={b.id} className="py-4">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <p className="font-semibold text-slate-900">
-                      {s ? `${s.lastName}, ${s.firstName}` : "—"}
+                    <p className="font-semibold">
+                      {s ? (
+                        <Link
+                          href={`/teacher/students/${s.studentId}`}
+                          className="text-slate-900 hover:text-emerald-700 hover:underline"
+                        >
+                          {s.lastName}, {s.firstName}
+                        </Link>
+                      ) : (
+                        <span className="text-slate-900">—</span>
+                      )}
                     </p>
                     <p className="mt-0.5 text-xs text-slate-500">
                       {formatDateLong(b.date)} · {CATEGORY_LABELS[b.category] ?? b.category}

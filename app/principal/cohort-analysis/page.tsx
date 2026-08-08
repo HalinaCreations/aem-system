@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { getCohortAnalysis, type CohortYearSlice } from "@/lib/risk/queries";
 import CohortForm from "./cohort-form";
+import PageHeader from "@/components/shell/page-header";
 
 type SearchParams = {
   grade?: string;
@@ -72,13 +73,12 @@ export default async function PrincipalCohortAnalysisPage({
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <header>
-        <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">Cohort analysis</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Compare a grade level across school years. Risk band distribution, intervention pipeline, and completed-intervention outcomes side by side. Year-over-year drift shows the change in HIGH-band rate vs. the prior year column.
-        </p>
-      </header>
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        label="Strategic Insights"
+        title="Cohort analysis"
+        description="Compare a grade level across school years. Risk band distribution, intervention pipeline, and completed-intervention outcomes side by side. Year-over-year drift shows the change in HIGH-band rate vs. the prior year column."
+      />
 
       <CohortForm
         gradeOptions={gradeOptions}

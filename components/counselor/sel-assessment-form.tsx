@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { SELLevel } from "@prisma/client";
 import { createSELAssessmentAction } from "@/app/actions/counselor/sel";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 const LEVELS: SELLevel[] = ["THRIVING", "STABLE", "AT_RISK", "CRITICAL"];
 const LEVEL_LABEL: Record<SELLevel, string> = {
@@ -120,19 +121,22 @@ export default function SELAssessmentForm({
           Student self-rating{" "}
           <span className="font-normal text-slate-400">· optional — only if the student gave one</span>
         </span>
-        <select
+        <Select
           value={selfAssessment}
-          onChange={(e) => setSelfAssessment(e.target.value as SELLevel | "")}
-          disabled={pending}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
+          onValueChange={(val) => setSelfAssessment(val as SELLevel | "")}
         >
-          <option value="">Not given</option>
-          {LEVELS.map((lvl) => (
-            <option key={lvl} value={lvl}>
-              {LEVEL_LABEL[lvl]}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger disabled={pending}>
+            <SelectValue placeholder="Not given" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">Not given</SelectItem>
+            {LEVELS.map((lvl) => (
+              <SelectItem key={lvl} value={lvl}>
+                {LEVEL_LABEL[lvl]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </label>
 
       <label className="flex flex-col gap-1.5 text-xs font-medium text-slate-700">

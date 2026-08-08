@@ -2,7 +2,7 @@ import type { NavSection, ThemeName } from "@/components/shell/role-shell";
 
 export const PRINCIPAL_BADGE = "Principal workspace";
 export const PRINCIPAL_TITLE = "Oversight and decision dashboard";
-export const PRINCIPAL_THEME: ThemeName = "rose";
+export const PRINCIPAL_THEME: ThemeName = "emerald";
 
 export const PRINCIPAL_NAV: NavSection[] = [
   {
@@ -28,11 +28,6 @@ export const PRINCIPAL_NAV: NavSection[] = [
     href: "/principal/cohort-analysis",
     description:
       "Compare a grade level across school years — risk band distribution, intervention pipeline, completed-intervention outcomes, year-over-year drift. CSV export available.",
-  },
-  {
-    title: "Governance review",
-    description:
-      "Inspect audit history, outcome trends, and risk overrides with mandatory written accountability.",
   },
   {
     title: "How this system works",

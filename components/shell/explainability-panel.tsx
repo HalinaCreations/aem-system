@@ -2,8 +2,8 @@
 // Shows the score, band, and factor breakdown in human-readable form.
 // Pure UI — accepts pre-fetched data; no I/O.
 
-import Link from "next/link";
 import Explain from "@/components/shell/explain";
+import SystemWorksLink from "@/components/shell/system-works-link";
 import type { RiskFactors, RiskBandLabel, InterventionHistoryBreakdown } from "@/lib/risk/types";
 
 const FACTOR_HELP: Record<string, string> = {
@@ -72,12 +72,12 @@ export default function ExplainabilityPanel({ score, band, factors, compact = fa
           <p className={`font-semibold ${style.text}`}>{style.label}</p>
           <p className="text-xs text-slate-500">Score: {score.toFixed(1)} / 100</p>
         </div>
-        <Link
-          href="/learn/risk-score"
+        <SystemWorksLink
+          tab="risk"
           className="ml-auto shrink-0 text-[11px] font-medium text-slate-500 underline underline-offset-2 transition-colors hover:text-slate-900"
         >
           How does this work?
-        </Link>
+        </SystemWorksLink>
       </div>
 
       {/* Factor bars */}

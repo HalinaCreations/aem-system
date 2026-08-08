@@ -11,6 +11,8 @@ import {
 import type { Role, UserStatus } from "@prisma/client";
 import type { Pagination } from "@/lib/pagination";
 import { PaginationBar } from "@/components/shell/pagination-bar";
+import PageHeader from "@/components/shell/page-header";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 type UserRow = {
   id: string;
@@ -42,6 +44,8 @@ export default function UsersManager({
   currentSearch: string | null;
   pagination: Pagination;
 }) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const filterHref = (role: RoleFilter) => {
     const params = new URLSearchParams();
     if (role !== "ALL") params.set("role", role);
@@ -51,16 +55,23 @@ export default function UsersManager({
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 md:p-8">
-        <h1 className="text-xl font-semibold text-slate-900 md:text-2xl">User management</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Create staff accounts, suspend access, reset passwords, and manage teacher
-          assignments. All mutations are audited.
-        </p>
-      </section>
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        label="System Administration"
+        title="User management"
+        description="Create staff accounts, suspend access, reset passwords, and manage teacher assignments. All mutations are audited."
+        actions={
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition-all"
+            style={{ background: "linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)" }}
+          >
+            + Add User
+          </button>
+        }
+      />
 
-      <CreateUserCard />
+      {isModalOpen && <CreateUserCard onClose={() => setIsModalOpen(false)} />}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6">
         <div className="flex flex-col gap-3">
@@ -189,92 +200,130 @@ function StatusBadge({ status }: { status: UserStatus }) {
   );
 }
 
-function CreateUserCard() {
+function CreateUserCard({ onClose }: { onClose: () => void }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
     const fd = new FormData(form);
     setError(null);
-    setSuccess(null);
     startTransition(async () => {
       const r = await createUserAction(fd);
       if (!r.ok) {
         setError(r.error);
         return;
       }
-      setSuccess(`Created ${String(fd.get("email"))}`);
       form.reset();
+      onClose();
     });
   };
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6">
-      <h2 className="text-lg font-semibold text-slate-900">Create a new user</h2>
-      <p className="mt-1 text-sm text-slate-600">
-        Password is stored using bcrypt cost 10. Share it with the user out-of-band.
-      </p>
+    <div className="fixed inset-0 z-50 bg-slate-950/45 flex items-center justify-center p-4">
+      {/* Backdrop click to close */}
+      <div className="absolute inset-0" onClick={onClose} />
 
-      <form onSubmit={handleSubmit} className="mt-4 grid gap-3 md:grid-cols-2">
-        <Field label="Name" htmlFor="cu-name">
-          <input
-            id="cu-name"
-            name="name"
-            required
-            maxLength={120}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-100"
-          />
-        </Field>
-        <Field label="Email" htmlFor="cu-email">
-          <input
-            id="cu-email"
-            name="email"
-            type="email"
-            required
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-100"
-          />
-        </Field>
-        <Field label="Role" htmlFor="cu-role">
-          <select
-            id="cu-role"
-            name="role"
-            required
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-100"
-          >
-            <option value="TEACHER">Teacher</option>
-            <option value="COUNSELOR">Counselor</option>
-            <option value="PRINCIPAL">Principal</option>
-            <option value="ADMIN">Admin</option>
-          </select>
-        </Field>
-        <Field label="Initial password (min 8)" htmlFor="cu-pw">
-          <input
-            id="cu-pw"
-            name="password"
-            type="text"
-            required
-            minLength={8}
-            maxLength={128}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-mono focus:border-indigo-500 focus:ring-1 focus:ring-indigo-100"
-          />
-        </Field>
+      <section className="relative z-10 bg-white rounded-3xl border border-slate-200 p-7 max-w-lg w-full shadow-2xl flex flex-col gap-5">
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          type="button"
+          className="absolute top-5 right-5 text-slate-400 hover:text-slate-650 transition-colors"
+          aria-label="Close modal"
+        >
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
 
-        <div className="md:col-span-2 flex flex-wrap items-center justify-between gap-3">
-          {error && <p className="text-sm text-red-700" role="alert">{error}</p>}
-          {success && <p className="text-sm text-emerald-700">{success}</p>}
-          <button
-            type="submit"
-            disabled={pending}
-            className="ml-auto rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-60"
-          >
-            {pending ? "Creating…" : "Create user"}
-          </button>
+        <div className="flex items-center gap-4">
+          <div className="h-10 w-10 shrink-0 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 leading-tight">Create a new user</h2>
+            <p className="mt-1 text-xs text-slate-500 leading-relaxed">
+              Staff credentials stored securely. Share details with the user out-of-band.
+            </p>
+          </div>
         </div>
-      </form>
-    </section>
+
+        <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
+          <Field label="Name" htmlFor="cu-name">
+            <input
+              id="cu-name"
+              name="name"
+              required
+              maxLength={120}
+              placeholder="e.g. John Doe"
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all placeholder:text-slate-400"
+            />
+          </Field>
+          <Field label="Email" htmlFor="cu-email">
+            <input
+              id="cu-email"
+              name="email"
+              type="email"
+              required
+              placeholder="name@school.edu"
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all placeholder:text-slate-400"
+            />
+          </Field>
+          <Field label="Role" htmlFor="cu-role">
+            <Select
+              name="role"
+              defaultValue="TEACHER"
+            >
+              <SelectTrigger className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all w-full flex items-center justify-between">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TEACHER">Teacher</SelectItem>
+                <SelectItem value="COUNSELOR">Counselor</SelectItem>
+                <SelectItem value="PRINCIPAL">Principal</SelectItem>
+                <SelectItem value="ADMIN">Admin</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Initial password (min 8)" htmlFor="cu-pw">
+            <input
+              id="cu-pw"
+              name="password"
+              type="text"
+              required
+              minLength={8}
+              maxLength={128}
+              placeholder="••••••••"
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-mono focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all placeholder:text-slate-400"
+            />
+          </Field>
+
+          <div className="md:col-span-2 flex flex-col gap-3 mt-3 border-t border-slate-100 pt-4">
+            {error && <p className="text-xs text-red-650 font-bold" role="alert">{error}</p>}
+            <div className="flex gap-2.5 justify-end w-full">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-slate-200 bg-white px-4.5 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={pending}
+                className="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-60 transition-all"
+              >
+                {pending ? "Creating…" : "Create user"}
+              </button>
+            </div>
+          </div>
+        </form>
+      </section>
+    </div>
   );
 }
 
