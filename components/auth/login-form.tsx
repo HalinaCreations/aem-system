@@ -4,20 +4,6 @@ import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { loginAction } from "@/app/actions/auth";
 
-const DEMO_ACCOUNTS = [
-  { email: "admin@school.edu", role: "Admin" },
-  { email: "teacher@school.edu", role: "Teacher" },
-  { email: "counselor@school.edu", role: "Counselor" },
-  { email: "principal@school.edu", role: "Principal" },
-];
-
-const ROLE_COLORS: Record<string, string> = {
-  Admin:     "#4f46e5",
-  Teacher:   "#0891b2",
-  Counselor: "#059669",
-  Principal: "#d97706",
-};
-
 export default function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -156,40 +142,6 @@ export default function LoginForm() {
           "Sign in →"
         )}
       </button>
-
-      {/* Demo accounts */}
-      <div className="mt-6">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3">
-          Quick access — demo accounts
-        </p>
-        <div className="grid grid-cols-2 gap-2">
-          {DEMO_ACCOUNTS.map((a) => (
-            <button
-              key={a.email}
-              type="button"
-              onClick={() => {
-                setEmail(a.email);
-                setPassword(`${a.role.toLowerCase()}123`);
-                setError(null);
-              }}
-              className="flex flex-col items-start rounded-xl px-3 py-2.5 text-left transition-all hover:scale-[1.02]"
-              style={{
-                background: "#fff",
-                border: "1px solid #e2e8f0",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-              }}
-            >
-              <span
-                className="text-[10px] font-bold uppercase tracking-wide mb-0.5"
-                style={{ color: ROLE_COLORS[a.role] ?? "#4f46e5" }}
-              >
-                {a.role}
-              </span>
-              <span className="text-[11px] text-slate-500 truncate w-full">{a.email}</span>
-            </button>
-          ))}
-        </div>
-      </div>
     </form>
   );
 }
