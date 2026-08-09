@@ -1,0 +1,21 @@
+node_modules
+.next
+.git
+.github
+.vscode
+.claude
+*.tsbuildinfo
+npm-debug.log*
+.DS_Store
+
+# Never bake secrets into an image layer. Runtime env comes from Dokploy /
+# docker-compose, not from a committed file.
+.env
+.env.*
+!.env.example
+
+# Not needed to build or run the app.
+docs
+README.md
+CLAUDE.md
+AGENTS.md

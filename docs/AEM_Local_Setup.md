@@ -122,6 +122,32 @@ This populates the database with the development baseline:
 
 ---
 
+## 6b. (Optional) Load the demo / simulation dataset
+
+`db:seed` gives you the minimum needed to log in. For dashboards, cohort views,
+and pattern detection to have anything to show, load the demo dataset on top:
+
+```bash
+npm run db:seed:demo     # scripts/seed-demo.ts
+```
+
+| What | Detail |
+|---|---|
+| School years | SY 2023-2024, SY 2024-2025, SY 2025-2026 (active) — one cohort progressing G7 → G8 → G9 |
+| Sections | 2 per grade level per year (Aristotle/Bacon, Darwin/Einstein, Faraday/Galileo) |
+| Students | 40 per section, ~250 active enrollments in the current year |
+| Per-enrollment data | Grades, attendance, behavioral records, SEL assessments |
+| Workflow | Demo interventions (one per scope, closed with outcomes) + counseling notes |
+| Algorithm | Risk engine run per year — ~730 assessments, patterns and recommendation drafts materialised |
+
+Takes ~20–30s. Also idempotent (deterministic keys, seeded PRNG). Prints eleven
+extra demo teacher/adviser logins at the end, all on the password `demo123`.
+
+> Run `db:seed` **first** — the demo script reuses the active school year and
+> the `AlgorithmConfig` that the baseline creates.
+
+---
+
 ## 7. Start the dev server
 
 ```bash
@@ -195,12 +221,17 @@ npm run db:reset
 npm run db:up          # Start Postgres container
 npm run db:down        # Stop Postgres container
 npm run db:migrate     # Apply pending migrations
-npm run db:seed        # Seed / re-seed the database
+npm run db:seed        # Seed / re-seed the baseline (prisma/seed.ts)
+npm run db:seed:demo   # Load the 3-year demo dataset (scripts/seed-demo.ts)
+npm run db:reset:data  # Reset to data baseline (scripts/reset-to-data-only.ts)
 npm run db:reset       # Nuclear reset (drop + migrate + seed)
+npm run db:deploy      # Apply migrations without prompting (production path)
 npm run db:studio      # Open Prisma Studio at localhost:5555
+npm run risk:run       # Recompute risk for the active year (scripts/run-risk-engine.ts)
 npm run dev            # Start dev server at localhost:3010
 npm run build          # Production build
 npx tsc --noEmit       # Type-check
 npm run lint           # ESLint
-npx tsx scripts/reset-to-data-only.ts   # Reset to data baseline
 ```
+
+Deploying to a server? See [AEM_Deployment.md](AEM_Deployment.md).

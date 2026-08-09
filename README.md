@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AEM System
 
-## Getting Started
+**Algorithmic Educational Management** — a high school student-support and
+intervention-planning platform. Risk scoring, multi-scope pattern detection, and
+recommendation drafting, wrapped in explainability and governance: every
+algorithmic output ships with its factor breakdown, every write is audited, and
+sensitive fields are filtered at the query layer rather than by hiding UI.
 
-First, run the development server:
+Four roles — Admin, Teacher, Counselor, Principal — each with its own workspace
+and its own view of the same data.
+
+## Stack
+
+Next.js 16.2.4 (App Router) · React 19.2.4 · TypeScript · Prisma 7 +
+`@prisma/adapter-pg` · PostgreSQL 16 · Auth.js v5 (JWT) · Tailwind v4 · Zod 4 ·
+Gemini (optional, degrades gracefully).
+
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env          # then set AUTH_SECRET: openssl rand -base64 32
+npm run db:up                 # Postgres 16 in Docker on :5433
+npm run db:migrate
+npm run db:seed               # baseline: 5 accounts, 10 students
+npm run db:seed:demo          # optional: 3 school years of simulation data
+npm run dev                   # http://localhost:3010
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Log in as `admin@school.edu` / `admin123` (dev seed — see the setup guide for
+the other four accounts).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Full walkthrough: **[docs/AEM_Local_Setup.md](docs/AEM_Local_Setup.md)**.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deployment
 
-## Learn More
+Ships with a production Dockerfile and compose stack, aimed at Dokploy on a VPS.
+Migrations run on container start; the seeds run inside the container.
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Read **[docs/AEM_Deployment.md](docs/AEM_Deployment.md)** first — in particular
+the `AUTH_URL` / `AUTH_TRUST_HOST` requirement (logins fail silently without
+them behind a reverse proxy) and the warning about seeded credentials on a
+public domain.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Documentation
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Document | What it covers |
+|---|---|
+| [AEM_System_Specification.md](docs/AEM_System_Specification.md) | What the system is. Every feature traces back to this. |
+| [AEM_FLOW.md](docs/AEM_FLOW.md) | Page map, user flows, role visibility matrix |
+| [AEM_Algorithm.md](docs/AEM_Algorithm.md) | Risk scoring, pattern rules, recommendations |
+| [AEM_Scenario_Maria.md](docs/AEM_Scenario_Maria.md) | End-to-end reference scenario / regression checklist |
+| [AEM_Development_Phases.md](docs/AEM_Development_Phases.md) | Build order and current status |
+| [AEM_Local_Setup.md](docs/AEM_Local_Setup.md) | Getting it running on your machine |
+| [AEM_Deployment.md](docs/AEM_Deployment.md) | Shipping it to a server |
+| [CLAUDE.md](CLAUDE.md) | Conventions and contribution contract |

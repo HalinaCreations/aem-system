@@ -6,7 +6,9 @@ const PUBLIC_PATHS = new Set<string>(["/"]);
 // route handler authenticates with a shared secret and refuses to run when
 // that secret is unset, so letting it past the session redirect here does not
 // leave it open.
-const PUBLIC_PREFIXES = ["/api/auth", "/api/cron", "/_next", "/favicon"];
+// `/api/health` is a liveness probe for Docker/Dokploy, which has no session to
+// present. It returns a bare ok/not-ok — no data to protect.
+const PUBLIC_PREFIXES = ["/api/auth", "/api/cron", "/api/health", "/_next", "/favicon"];
 
 const ROLE_PREFIXES: Record<string, string> = {
   "/admin": "ADMIN",

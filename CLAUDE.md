@@ -62,8 +62,12 @@ prisma/
   seed.ts
 proxy.ts                      # Next 16 RBAC (renamed from middleware.ts)
 prisma.config.ts              # Prisma 7 config (datasource URL lives here)
-docker-compose.yml            # Postgres 16 on :5433
-docs/                         # Spec + flow + scenario + phases
+scripts/                      # Seeds (seed-demo), engine runner, verify-* suite
+docker-compose.yml            # LOCAL DEV Postgres 16 on :5433 — not for deploys
+docker-compose.prod.yml       # Production stack (app + Postgres), no exposed DB port
+Dockerfile                    # Multi-stage production image (Next standalone)
+docker-entrypoint.sh          # prisma migrate deploy, then start the server
+docs/                         # Spec + flow + scenario + phases + deployment
 ```
 
 When you add new code, match this layout. Don't invent parallel structures.
@@ -186,6 +190,7 @@ Active SY: `SY 2025-2026`. Sections: 9-Newton, 9-Curie. Maria Santos is enrolled
 | What page does this feature live on? | [docs/AEM_FLOW.md](docs/AEM_FLOW.md) |
 | What's the user journey? | [docs/AEM_Scenario_Maria.md](docs/AEM_Scenario_Maria.md) |
 | What phase are we in? | [docs/AEM_Development_Phases.md](docs/AEM_Development_Phases.md) |
+| How do I deploy / seed a server? | [docs/AEM_Deployment.md](docs/AEM_Deployment.md) |
 | How does this Next 16 API work now? | `node_modules/next/dist/docs/` |
 | Is this Prisma 7 syntax different? | [prisma.config.ts](prisma.config.ts) is the canonical example; check the upgrade guide otherwise |
 

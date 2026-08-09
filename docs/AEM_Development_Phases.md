@@ -1169,6 +1169,61 @@ Figure 20's *automated reports* / *easy report generation*. Before this, the onl
 
 ---
 
+## Phase 10 — Deployment Packaging ✅ *(complete 2026-08-09)*
+
+**Goal:** make the system deployable to a VPS behind a reverse proxy (Dokploy + Traefik + Docker) without changing any feature behaviour. Infrastructure only — no spec surface was added, removed, or altered.
+
+### 10.1 Container image *(✅)*
+
+- [x] `output: "standalone"` in [next.config.ts](../next.config.ts) — emits a self-contained `server.js` as the container entrypoint.
+- [x] Multi-stage [Dockerfile](../Dockerfile) on `node:24-bookworm-slim`. **Debian, not Alpine, deliberately:** the Prisma 7 schema engine used by `migrate deploy` ships glibc binaries and musl has been the flaky path. Non-root `nextjs` user; `HEALTHCHECK` against `/api/health`.
+- [x] Build-time `DATABASE_URL` / `AUTH_SECRET` placeholders are passed **inline on the `RUN`**, not via `ENV`, so no placeholder credential is baked into an image layer (and Docker's `SecretsUsedInArgOrEnv` lint stays quiet). Safe because every route is `ƒ` — the build never opens a connection.
+- [x] [.dockerignore](../.dockerignore) excludes `node_modules`, `.next`, and every `.env*` except the example.
+
+### 10.2 Migrations on boot *(✅)*
+
+- [x] [docker-entrypoint.sh](../docker-entrypoint.sh) runs `prisma migrate deploy` before `exec`ing the server. `deploy` (not `dev`) — never prompts, never resets, no-op when current, so restarts are cheap. Escape hatch: `RUN_MIGRATIONS=false`.
+- [x] The runner stage keeps the full `node_modules` plus `prisma/`, `scripts/`, and `lib/` so the seeds, `run-risk-engine`, and the `verify-*` suite all run inside the container via `docker exec`. **Costs ~1.8 GB of image** — the tradeoff and the lean alternative are written down in [AEM_Deployment.md](AEM_Deployment.md#known-constraints) rather than left as a surprise.
+
+### 10.3 Health endpoint *(✅)*
+
+- [x] [app/api/health/route.ts](../app/api/health/route.ts) — `SELECT 1` against Prisma, 200/503. Added to `PUBLIC_PREFIXES` in [proxy.ts](../proxy.ts): an orchestrator has no session to present. **Body is deliberately opaque** (`{ok:false}`, never the error) — this is the one unauthenticated endpoint that touches the database, so it must not narrate connection failures to the internet.
+
+### 10.4 Stack + config *(✅)*
+
+- [x] [docker-compose.prod.yml](../docker-compose.prod.yml) — app + Postgres 16, **no published database port** (dev's `docker-compose.yml` publishes 5433 with a throwaway password; keeping them as separate files is what stops the two being confused).
+- [x] `AUTH_URL` + `AUTH_TRUST_HOST=true` wired in. Auth.js v5 sets `trustHost` from `AUTH_URL ?? AUTH_TRUST_HOST ?? <known platform>` — behind Traefik neither is inferred, so **logins fail silently without them.** This was the single highest-risk item in the phase.
+- [x] Three security headers in [next.config.ts](../next.config.ts) (`X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`). No CSP — nonce plumbing is out of scope and noted as a constraint.
+- [x] `.env.example` gained a production section; `package.json` gained `db:seed:demo`, `db:reset:data`, `db:deploy`, `risk:run` so the scripts are discoverable rather than tribal knowledge.
+- [x] [AEM_Deployment.md](AEM_Deployment.md) — three deploy paths (Dokploy Compose / Dokploy Application / plain compose), seeding, backups, constraints, smoke test.
+
+### Phase 10 Definition of Done — Verified 2026-08-09
+
+Built and run against a real Postgres, not reasoned about:
+
+| Check | Result |
+|---|---|
+| `npx tsc --noEmit` · `npm run build` | clean |
+| `docker build` | succeeds, no warnings |
+| First boot | all 13 migrations applied, then `✓ Ready` |
+| Container health | `healthy` |
+| `npm run db:seed` in container | 5 users, 10 students |
+| `npm run db:seed:demo` in container | 3 SYs, 730 assessments, 19 patterns, **21s** |
+| Login via simulated Traefik (`Host: aem.example.com`, `X-Forwarded-Proto: https`) | 302 → `https://aem.example.com`, `__Secure-authjs.session-token` set, session resolves with the right role |
+| Counselor → `/admin` | 307 → `/?forbidden=1` |
+| Anonymous → `/principal/dashboard` | 307 → `/?from=…` |
+| `POST /api/cron/recompute` wrong / right secret | 401 / 200 `computed: 250` |
+| Security headers on `/` | `DENY`, `nosniff` present |
+
+### Phase 10 retrospective
+
+- **`AUTH_TRUST_HOST` is the failure that would have wasted a day.** It produces no error — the login POST just doesn't establish a session. Reading `@auth/core/lib/utils/env.js` to confirm the exact precedence (`AUTH_URL ?? AUTH_TRUST_HOST ?? platform detection`) took two minutes and was worth more than any amount of guessing.
+- **The proxy simulation was the test worth writing.** Booting the container proves the app starts; sending `Host` / `X-Forwarded-Proto` headers that don't match `127.0.0.1` is what proves it will survive Traefik. It also surfaced the `__Secure-` cookie-prefix switch, which flips purely on the scheme in `AUTH_URL`.
+- **Image size was measured before being accepted.** A prune experiment inside the running container showed the obvious cuts save only ~210 MB and break the Prisma CLI (`@prisma/studio-core` is eagerly required), while the real weight — `next` + `@next` at 411 MB — cannot be deduplicated once the traced standalone tree and the full tree are merged at the same path. Recorded as a documented tradeoff rather than a half-done optimisation.
+- **Seeded credentials are now a deployment hazard, not a convenience.** `admin@school.edu / admin123` is in a public repo. The deployment guide makes changing or gating them a step, not a footnote.
+
+---
+
 ## Cut Order (if running behind)
 
 Per spec §15. Cut from the top of this list first. **Never cut anything below the line.**
