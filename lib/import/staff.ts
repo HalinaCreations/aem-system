@@ -23,9 +23,12 @@ function normalizeRole(v: string): Role | null {
   return null;
 }
 
-function normalizeStatus(v: string | undefined): UserStatus {
-  if (!v) return "ACTIVE";
-  return v.trim().toUpperCase() === "SUSPENDED" ? "SUSPENDED" : "ACTIVE";
+function normalizeStatus(v: string | undefined): UserStatus | null {
+  const x = (v ?? "").trim().toUpperCase();
+  if (!x) return "ACTIVE";
+  if (x === "ACTIVE") return "ACTIVE";
+  if (x === "SUSPENDED") return "SUSPENDED";
+  return null;
 }
 
 // Deliberately permissive: enough to catch a mangled column, not an RFC parser.
@@ -84,14 +87,16 @@ export function validateStaffCsv(parsed: ParsedCsv): ValidationResult<StaffRow> 
       errors.push(`password must be at least ${MIN_PASSWORD_LENGTH} characters`);
     }
 
-    const status = normalizeStatus(get(raw, "status"));
+    const rawStatus = get(raw, "status");
+    const status = normalizeStatus(rawStatus);
+    if (!status) errors.push(`status must be ACTIVE or SUSPENDED (got "${rawStatus}")`);
 
     if (errors.length > 0) return { ok: false, row: rowNum, errors, raw };
 
     return {
       ok: true,
       row: rowNum,
-      data: { email, name, role: role as Role, password, status },
+      data: { email, name, role: role as Role, password, status: status as UserStatus },
     };
   });
 

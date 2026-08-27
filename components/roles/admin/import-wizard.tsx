@@ -104,9 +104,9 @@ export default function ImportWizard({ years, defaultYearId }: Props) {
               }
               sampleFileName="staff-sample.csv"
               sampleRows={[
-                { email: "m.carandang@school.edu", name: "CARANDANG, Mary Jane S.", role: "PRINCIPAL", password: "", status: "ACTIVE" },
-                { email: "a.rosales@school.edu", name: "ROSALES, Ann Charise M.", role: "COUNSELOR", password: "", status: "ACTIVE" },
-                { email: "j.gabog@school.edu", name: "GABOG, Jonas M.", role: "TEACHER", password: "", status: "ACTIVE" },
+                { email: "e.bautista@school.edu", name: "BAUTISTA, Elena S.", role: "PRINCIPAL", password: "", status: "ACTIVE" },
+                { email: "r.villanueva@school.edu", name: "VILLANUEVA, Rosa M.", role: "COUNSELOR", password: "", status: "ACTIVE" },
+                { email: "j.reyes@school.edu", name: "REYES, Juan M.", role: "TEACHER", password: "", status: "ACTIVE" },
               ]}
               previewAction={previewStaffAction}
               commitAction={commitStaffAction}
@@ -192,13 +192,13 @@ export default function ImportWizard({ years, defaultYearId }: Props) {
                   blank and set <code className="font-mono">isAdviser</code> to <code>true</code> for an advisory row.
                   Sections and subjects are created automatically. Use{" "}
                   <code className="font-mono">gradeLevel</code> = <code>Grade 9</code> and{" "}
-                  <code className="font-mono">section</code> = <code>Moonstone</code> — bare section names, no grade prefix.
+                  <code className="font-mono">section</code> = <code>Curie</code> — bare section names, no grade prefix.
                 </p>
               }
               sampleFileName="assignments-sample.csv"
               sampleRows={[
-                { email: "j.gabog@school.edu", gradeLevel: "Grade 9", section: "Musgravite", subjectCode: "", subjectName: "", isAdviser: "true" },
-                { email: "j.gabog@school.edu", gradeLevel: "Grade 9", section: "Morganite", subjectCode: "ENG9", subjectName: "English 9", isAdviser: "false" },
+                { email: "j.reyes@school.edu", gradeLevel: "Grade 9", section: "Newton", subjectCode: "", subjectName: "", isAdviser: "true" },
+                { email: "j.reyes@school.edu", gradeLevel: "Grade 9", section: "Curie", subjectCode: "ENG9", subjectName: "English 9", isAdviser: "false" },
               ]}
               previewAction={previewAssignmentsAction}
               commitAction={commitAssignmentsAction}

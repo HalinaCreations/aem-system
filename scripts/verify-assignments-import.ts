@@ -10,8 +10,8 @@ const fail = (m: string) => {
 };
 
 const userIdByEmail = new Map<string, string>([
-  ["j.gabog@school.edu", "user-gabog"],
-  ["c.ablola@school.edu", "user-ablola"],
+  ["j.reyes@school.edu", "user-reyes"],
+  ["m.cruz@school.edu", "user-cruz"],
 ]);
 
 // 1. Adviser row + subject row
@@ -19,9 +19,9 @@ const ok = validateAssignmentsCsv(
   parseCsv(
     [
       "email,gradeLevel,section,subjectCode,subjectName,isAdviser",
-      "j.gabog@school.edu,Grade 9,Musgravite,,,true",
-      "j.gabog@school.edu,Grade 9,Morganite,ENG9,English 9,false",
-      "c.ablola@school.edu,Grade 9,Moonstone,SCI9,Science 9,",
+      "j.reyes@school.edu,Grade 9,Newton,,,true",
+      "j.reyes@school.edu,Grade 9,Curie,ENG9,English 9,false",
+      "m.cruz@school.edu,Grade 9,Newton,SCI9,Science 9,",
     ].join("\n"),
   ),
   { userIdByEmail },
@@ -30,7 +30,7 @@ if (ok.invalid.length !== 0) fail(`happy path: ${JSON.stringify(ok.invalid)}`);
 if (ok.valid.length !== 3) fail(`expected 3 valid, got ${ok.valid.length}`);
 if (ok.valid[0].data.isAdviser !== true) fail("adviser row should set isAdviser true");
 if (ok.valid[0].data.subjectCode !== null) fail("adviser row should have null subjectCode");
-if (ok.valid[0].data.userId !== "user-gabog") fail(`email should resolve to userId, got ${ok.valid[0].data.userId}`);
+if (ok.valid[0].data.userId !== "user-reyes") fail(`email should resolve to userId, got ${ok.valid[0].data.userId}`);
 if (ok.valid[1].data.subjectCode !== "ENG9") fail(`subjectCode = ${ok.valid[1].data.subjectCode}`);
 if (ok.valid[2].data.isAdviser !== false) fail("blank isAdviser should default false");
 
@@ -39,10 +39,10 @@ const bad = validateAssignmentsCsv(
   parseCsv(
     [
       "email,gradeLevel,section,subjectCode,subjectName,isAdviser",
-      "nobody@school.edu,Grade 9,Musgravite,ENG9,English 9,false",
-      "j.gabog@school.edu,Grade 9,Morganite,ENG9,,false",
-      "j.gabog@school.edu,Grade 9,Moonstone,,,true",
-      "c.ablola@school.edu,Grade 9,Moonstone,,,true",
+      "nobody@school.edu,Grade 9,Newton,ENG9,English 9,false",
+      "j.reyes@school.edu,Grade 9,Curie,ENG9,,false",
+      "j.reyes@school.edu,Grade 9,Newton,,,true",
+      "m.cruz@school.edu,Grade 9,Newton,,,true",
     ].join("\n"),
   ),
   { userIdByEmail },

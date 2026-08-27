@@ -1234,8 +1234,10 @@ because staff and advisories change every August.
 - [x] `lib/import/staff.ts` + `app/actions/import/staff.ts` — role mapping,
       bcrypt at cost 10, never overwrites an existing password on re-import.
       Email pattern `firstinitial.lastname@school.edu`, shared default password
-      `aem2026`; a blank password column means "use the default", and any
-      supplied password must be at least 8 characters.
+      (`DEFAULT_STAFF_PASSWORD` in `app/actions/import/staff.ts` — not printed
+      here); a blank password column means "use the default", and any
+      supplied password must be at least 8 characters. Imported accounts must
+      have their password reset before any non-local use.
 - [x] `lib/import/assignments.ts` + `app/actions/import/assignments.ts` —
       upserts Section and Subject, one adviser per section enforced in the
       validator. 151 assignment fragments parsed from the source, 0 left

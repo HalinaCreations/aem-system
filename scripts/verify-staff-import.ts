@@ -14,10 +14,10 @@ const ok = validateStaffCsv(
   parseCsv(
     [
       "email,name,role",
-      "m.carandang@school.edu,\"CARANDANG, Mary Jane S.\",PRINCIPAL",
-      "a.rosales@school.edu,\"ROSALES, Ann Charise M.\",counselor",
-      "i.quejano@school.edu,\"QUEJANO, Igleseria A.\",Admin",
-      "j.gabog@school.edu,\"GABOG, Jonas M.\",TEACHER",
+      "e.bautista@school.edu,\"BAUTISTA, Elena S.\",PRINCIPAL",
+      "r.villanueva@school.edu,\"VILLANUEVA, Rosa M.\",counselor",
+      "c.mendoza@school.edu,\"MENDOZA, Carlo A.\",Admin",
+      "j.reyes@school.edu,\"REYES, Juan M.\",TEACHER",
     ].join("\n"),
   ),
 );
@@ -38,7 +38,7 @@ const bad = validateStaffCsv(
   parseCsv(
     [
       "email,name,role",
-      "j.gabog@school.edu,Jonas Gabog,LIBRARIAN",
+      "j.reyes@school.edu,Juan Reyes,LIBRARIAN",
       "not-an-email,Someone Else,TEACHER",
       "dupe@school.edu,First Person,TEACHER",
       "dupe@school.edu,Second Person,TEACHER",
@@ -73,4 +73,22 @@ if (!blankRow || blankRow.data.password !== null) fail(`blank password column sh
 const longRow = pw.valid.find((r) => r.data.email === "long@school.edu");
 if (!longRow || longRow.data.password !== "eightplus") fail(`explicit valid password should be preserved, got ${longRow?.data.password}`);
 
-console.log("PASS — staff validator: happy path, normalization, defaults, 3 error classes, and password minimum length");
+// 5. Status: unknown value rejected (naming the column), blank column still
+// defaults to ACTIVE.
+const status = validateStaffCsv(
+  parseCsv(
+    [
+      "email,name,role,status",
+      "suspend@school.edu,Someone Suspended,TEACHER,SUSPEND",
+      "blankstatus@school.edu,Someone Blank,TEACHER,",
+    ].join("\n"),
+  ),
+);
+if (status.invalid.length !== 1) fail(`expected 1 invalid row for unknown status, got ${status.invalid.length}: ${JSON.stringify(status.invalid)}`);
+if (!status.invalid[0].errors.some((e) => e.toLowerCase().includes("status"))) {
+  fail(`unrecognized status error should name the status column: ${JSON.stringify(status.invalid[0].errors)}`);
+}
+if (status.valid.length !== 1) fail(`expected 1 valid row (blank status), got ${status.valid.length}`);
+if (status.valid[0].data.status !== "ACTIVE") fail(`blank status should default to ACTIVE, got ${status.valid[0].data.status}`);
+
+console.log("PASS — staff validator: happy path, normalization, defaults, 3 error classes, password minimum length, and status validation");

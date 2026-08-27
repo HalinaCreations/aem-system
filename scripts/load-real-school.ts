@@ -23,7 +23,7 @@ import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
 import bcrypt from "bcryptjs";
-import { PrismaClient, ConsentScope } from "@prisma/client";
+import { PrismaClient, ConsentScope, type Prisma } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { logAudit } from "../lib/audit";
 import { parseCsv } from "../lib/import/csv";
@@ -35,7 +35,7 @@ const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
 // Mirrors app/actions/import/staff.ts.
-const DEFAULT_STAFF_PASSWORD = "aem2026";
+const DEFAULT_STAFF_PASSWORD = "changeme2026";
 const BCRYPT_COST = 10;
 
 const SCHOOL_YEAR_LABEL = "SY 2026-2027";
@@ -124,30 +124,36 @@ async function loadStaff(csvText: string): Promise<{ total: number; created: num
 
   const existing = await prisma.user.findMany({
     where: { email: { in: validation.valid.map((v) => v.data.email) } },
-    select: { email: true },
+    select: { id: true, email: true, role: true, status: true },
   });
-  const existingEmails = new Set(existing.map((u) => u.email));
+  const existingByEmail = new Map(existing.map((u) => [u.email, u]));
 
   // Hash outside the transaction — bcrypt at cost 10 is deliberately slow and
   // would hold the transaction open far longer than necessary.
   const rows = await Promise.all(
     validation.valid.map(async (v) => {
-      if (!existingEmails.has(v.data.email)) {
+      const before = existingByEmail.get(v.data.email);
+      if (!before) {
         const hashedPassword = await bcrypt.hash(v.data.password ?? DEFAULT_STAFF_PASSWORD, BCRYPT_COST);
-        return { ...v.data, isNew: true as const, hashedPassword };
+        return { ...v.data, isNew: true as const, hashedPassword, before: null };
       }
       const hashedPassword = v.data.password ? await bcrypt.hash(v.data.password, BCRYPT_COST) : null;
-      return { ...v.data, isNew: false as const, hashedPassword };
+      return { ...v.data, isNew: false as const, hashedPassword, before };
     }),
   );
 
   let created = 0;
   let updated = 0;
 
+  // Per-user privilege-bearing changes (role, status, password) — mirrors
+  // app/actions/import/staff.ts commitStaffAction so both paths that write
+  // staff accounts leave the same per-user audit trail.
+  const userAuditEntries: Array<{ resourceId: string; metadata: Prisma.InputJsonValue }> = [];
+
   await prisma.$transaction(async (tx) => {
     for (const row of rows) {
       if (row.isNew) {
-        await tx.user.create({
+        const user = await tx.user.create({
           data: {
             email: row.email,
             name: row.name,
@@ -155,10 +161,15 @@ async function loadStaff(csvText: string): Promise<{ total: number; created: num
             status: row.status,
             hashedPassword: row.hashedPassword,
           },
+          select: { id: true },
         });
         created++;
+        userAuditEntries.push({
+          resourceId: user.id,
+          metadata: { change: "created", email: row.email, role: row.role, status: row.status },
+        });
       } else {
-        await tx.user.update({
+        const user = await tx.user.update({
           where: { email: row.email },
           data: {
             name: row.name,
@@ -168,11 +179,45 @@ async function loadStaff(csvText: string): Promise<{ total: number; created: num
             // untouched; only overwrite when the CSV gave an explicit value.
             ...(row.hashedPassword ? { hashedPassword: row.hashedPassword } : {}),
           },
+          select: { id: true },
         });
         updated++;
+
+        if (row.before!.role !== row.role) {
+          userAuditEntries.push({
+            resourceId: user.id,
+            metadata: { change: "role_changed", email: row.email, previousRole: row.before!.role, role: row.role },
+          });
+        }
+        if (row.before!.status !== row.status) {
+          userAuditEntries.push({
+            resourceId: user.id,
+            metadata: {
+              change: row.status === "SUSPENDED" ? "suspended" : "reactivated",
+              email: row.email,
+              previousStatus: row.before!.status,
+              status: row.status,
+            },
+          });
+        }
+        if (row.hashedPassword) {
+          userAuditEntries.push({
+            resourceId: user.id,
+            metadata: { change: "password_reset", email: row.email },
+          });
+        }
       }
     }
   }, BULK_TRANSACTION_OPTIONS);
+
+  for (const entry of userAuditEntries) {
+    await logAudit({
+      action: "IMPORT",
+      resourceType: "User",
+      resourceId: entry.resourceId,
+      metadata: entry.metadata,
+    });
+  }
 
   return { total: validation.total, created, updated };
 }

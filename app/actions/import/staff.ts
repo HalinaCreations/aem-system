@@ -2,6 +2,7 @@
 
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { logAudit } from "@/lib/audit";
@@ -10,7 +11,7 @@ import { checkCsvLimits } from "@/lib/import/limits";
 import { validateStaffCsv, type StaffRow } from "@/lib/import/staff";
 
 /** Applied when a row leaves the password column blank. Dev/demo only. */
-const DEFAULT_STAFF_PASSWORD = "aem2026";
+const DEFAULT_STAFF_PASSWORD = "changeme2026";
 const BCRYPT_COST = 10;
 
 // Prisma's default interactive-transaction timeout (5s) is sized for a live
@@ -117,30 +118,37 @@ export async function commitStaffAction(formData: FormData): Promise<StaffCommit
   // current hash untouched, not silently discard the admin's intent.
   const existing = await prisma.user.findMany({
     where: { email: { in: validation.valid.map((v) => v.data.email) } },
-    select: { email: true },
+    select: { id: true, email: true, role: true, status: true },
   });
-  const existingEmails = new Set(existing.map((u) => u.email));
+  const existingByEmail = new Map(existing.map((u) => [u.email, u]));
 
   // Hash outside the transaction — bcrypt at cost 10 is deliberately slow and
   // would hold the transaction open far longer than necessary.
   const rows = await Promise.all(
     validation.valid.map(async (v) => {
-      if (!existingEmails.has(v.data.email)) {
+      const before = existingByEmail.get(v.data.email);
+      if (!before) {
         const hashedPassword = await bcrypt.hash(v.data.password ?? DEFAULT_STAFF_PASSWORD, BCRYPT_COST);
-        return { ...v.data, isNew: true as const, hashedPassword };
+        return { ...v.data, isNew: true as const, hashedPassword, before: null };
       }
       const hashedPassword = v.data.password ? await bcrypt.hash(v.data.password, BCRYPT_COST) : null;
-      return { ...v.data, isNew: false as const, hashedPassword };
+      return { ...v.data, isNew: false as const, hashedPassword, before };
     }),
   );
 
   let created = 0;
   let updated = 0;
 
+  // Per-user privilege-bearing changes (role, status, password), tracked
+  // alongside the aggregate IMPORT row so "who was granted ADMIN, and when"
+  // is answerable from the audit log the same way it is for the manual path
+  // (app/actions/admin/users.ts).
+  const userAuditEntries: Array<{ resourceId: string; metadata: Prisma.InputJsonValue }> = [];
+
   await prisma.$transaction(async (tx) => {
     for (const row of rows) {
       if (row.isNew) {
-        await tx.user.create({
+        const user = await tx.user.create({
           data: {
             email: row.email,
             name: row.name,
@@ -148,10 +156,15 @@ export async function commitStaffAction(formData: FormData): Promise<StaffCommit
             status: row.status,
             hashedPassword: row.hashedPassword,
           },
+          select: { id: true },
         });
         created++;
+        userAuditEntries.push({
+          resourceId: user.id,
+          metadata: { change: "created", email: row.email, role: row.role, status: row.status },
+        });
       } else {
-        await tx.user.update({
+        const user = await tx.user.update({
           where: { email: row.email },
           data: {
             name: row.name,
@@ -161,8 +174,33 @@ export async function commitStaffAction(formData: FormData): Promise<StaffCommit
             // untouched; only overwrite when the CSV gave an explicit value.
             ...(row.hashedPassword ? { hashedPassword: row.hashedPassword } : {}),
           },
+          select: { id: true },
         });
         updated++;
+
+        if (row.before!.role !== row.role) {
+          userAuditEntries.push({
+            resourceId: user.id,
+            metadata: { change: "role_changed", email: row.email, previousRole: row.before!.role, role: row.role },
+          });
+        }
+        if (row.before!.status !== row.status) {
+          userAuditEntries.push({
+            resourceId: user.id,
+            metadata: {
+              change: row.status === "SUSPENDED" ? "suspended" : "reactivated",
+              email: row.email,
+              previousStatus: row.before!.status,
+              status: row.status,
+            },
+          });
+        }
+        if (row.hashedPassword) {
+          userAuditEntries.push({
+            resourceId: user.id,
+            metadata: { change: "password_reset", email: row.email },
+          });
+        }
       }
     }
   }, BULK_TRANSACTION_OPTIONS);
@@ -174,6 +212,16 @@ export async function commitStaffAction(formData: FormData): Promise<StaffCommit
     resourceId: "staff-csv",
     metadata: { totalRows: validation.total, created, updated },
   });
+
+  for (const entry of userAuditEntries) {
+    await logAudit({
+      action: "IMPORT",
+      userId: session.user.id,
+      resourceType: "User",
+      resourceId: entry.resourceId,
+      metadata: entry.metadata,
+    });
+  }
 
   return { ok: true, created, updated };
 }

@@ -170,14 +170,18 @@ Active SY: `SY 2025-2026`. Sections: 9-Newton, 9-Curie. Maria Santos is enrolled
 ### Real-school staff accounts (SY 2026-2027)
 
 31 staff imported from the school's teacher list. Email pattern
-`firstinitial.lastname@school.edu`, shared default password `aem2026`.
+`firstinitial.lastname@school.edu`. Every imported account shares the same
+default password, defined as `DEFAULT_STAFF_PASSWORD` in
+[app/actions/import/staff.ts](app/actions/import/staff.ts) — do not print that
+value here. Imported accounts must have their password reset before any
+non-local use; the shared default is dev/demo-only.
 
-| Email | Role | Notes |
+| Role | Count | Notes |
 |---|---|---|
-| `m.carandang@school.edu` | PRINCIPAL | |
-| `a.rosales@school.edu` | COUNSELOR | Guidance |
-| `i.quejano@school.edu` | ADMIN | Records officer |
-| *(28 others)* | TEACHER | 17 are section advisers |
+| PRINCIPAL | 1 | |
+| COUNSELOR | 1 | Guidance |
+| ADMIN | 1 | Records officer |
+| TEACHER | 28 | 17 are section advisers |
 
 The librarian and nurse were not imported — neither has a teaching load or a
 role in the spec's four-role model.
