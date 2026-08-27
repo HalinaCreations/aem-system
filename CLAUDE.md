@@ -167,6 +167,30 @@ After every Prisma schema change: `npm run db:migrate` (one migration per logica
 
 Active SY: `SY 2025-2026`. Sections: 9-Newton, 9-Curie. Maria Santos is enrolled in 9-Newton — she's the protagonist of the reference scenario.
 
+### Real-school staff accounts (SY 2026-2027)
+
+31 staff imported from the school's teacher list. Email pattern
+`firstinitial.lastname@school.edu`. Every imported account shares the same
+default password, defined as `DEFAULT_STAFF_PASSWORD` in
+[app/actions/import/staff.ts](app/actions/import/staff.ts) — do not print that
+value here. Imported accounts must have their password reset before any
+non-local use; the shared default is dev/demo-only.
+
+| Role | Count | Notes |
+|---|---|---|
+| PRINCIPAL | 1 | |
+| COUNSELOR | 1 | Guidance |
+| ADMIN | 1 | Records officer |
+| TEACHER | 28 | 17 are section advisers |
+
+The librarian and nurse were not imported — neither has a teaching load or a
+role in the spec's four-role model.
+
+Active SY after this import is **SY 2026-2027** (576 students, 17 sections,
+Grades 7-10, no grades or attendance). The Maria Santos reference scenario
+lives in **SY 2025-2026**, which survived the import untouched (250
+enrollments) — switch years to walk it.
+
 ---
 
 ## Working agreements

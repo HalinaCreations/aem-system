@@ -9,6 +9,26 @@ import { checkCsvLimits } from "@/lib/import/limits";
 import { validateRosterCsv, type RosterRow } from "@/lib/import/roster";
 import { ConsentScope } from "@prisma/client";
 
+// Prisma's default interactive-transaction timeout (5s) is sized for a live
+// request, not an admin-only bulk write. A full roster commit runs several
+// sequential round trips per row (student before-check + upsert, enrollment
+// upsert, three consent upserts), so it needs far more wall-clock room than
+// the default gives it. 120s comfortably covers a realistic single-school-
+// year roster: the real dataset (576 students, 163 assignments, 31 staff)
+// runs end to end in ~23s, so this leaves roughly 4x headroom past any
+// plausible junior high school enrolment. It is not sized for the 10,000-row
+// cap in lib/import/limits.ts — an import approaching that cap should be
+// split into batches (the spec already prescribes this for attendance, via
+// monthly chunks) rather than given a multi-minute timeout that just holds a
+// transaction open longer before it eventually fails.
+//
+// maxWait is a separate bound: it caps how long Prisma waits to acquire a
+// connection to *start* the transaction (failure mode P2024), not how long
+// the transaction body may run (timeout, failure mode P2028). DATABASE_URL
+// sets no connection_limit, so a bulk import shares its pool with ordinary
+// web traffic; 15s gives it room to start even when the pool is busy.
+const BULK_TRANSACTION_OPTIONS = { maxWait: 15_000, timeout: 120_000 };
+
 export type RosterPreview =
   | {
       ok: true;
@@ -170,6 +190,9 @@ export async function commitRosterAction(formData: FormData): Promise<RosterComm
           middleName: v.data.middleName,
           sex: v.data.sex,
           birthDate: v.data.birthDate,
+          guardianName: v.data.guardianName,
+          guardianContact: v.data.guardianContact,
+          spedStatus: v.data.spedStatus,
         },
         create: {
           lrn: v.data.lrn,
@@ -178,6 +201,9 @@ export async function commitRosterAction(formData: FormData): Promise<RosterComm
           middleName: v.data.middleName,
           sex: v.data.sex,
           birthDate: v.data.birthDate,
+          guardianName: v.data.guardianName,
+          guardianContact: v.data.guardianContact,
+          spedStatus: v.data.spedStatus,
         },
       });
       if (!beforeStudent) createdStudents++;
@@ -221,7 +247,7 @@ export async function commitRosterAction(formData: FormData): Promise<RosterComm
         if (!beforeC) createdConsents++;
       }
     }
-  });
+  }, BULK_TRANSACTION_OPTIONS);
 
   await logAudit({
     action: "IMPORT",

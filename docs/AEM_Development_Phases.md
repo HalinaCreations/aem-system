@@ -595,7 +595,7 @@ Ready for Phase 3 (Intervention Module) or Phase 4 (Algorithmic Engine), dependi
 
 ### 5.3 Principal Dashboards *(✅ 2026-05-15)*
 - [x] School-Wide Dashboard at [/principal/dashboard](app/principal/dashboard/page.tsx) with drill-down by grade, section, demographic
-- [x] Risk distribution by grade level, section, sex, SPED status, learning modality via [lib/risk/queries.ts](lib/risk/queries.ts) (`getRiskBreakdownByGrade`, `getRiskBreakdownBySection`, `getBiasBreakdowns`)
+- [x] Risk distribution by grade level, section, sex, SPED status, learning modality via [lib/risk/queries.ts](lib/risk/queries.ts) (`getRiskBreakdownByGrade`, `getRiskBreakdownBySection`, `getBiasBreakdowns`) — **correction (2026-08-27): the SPED axis was never built.** `getBiasBreakdowns` covers sex and learning modality only; grade level and section come from the separate `getRiskBreakdownByGrade` / `getRiskBreakdownBySection` functions. No SPED axis exists in any of them. See Phase 11 carry-forward.
 - [x] Bias monitoring: disparity flag when a group's HIGH rate exceeds the school average by &gt;50%, surfaced inline in [components/principal/risk-breakdown-table.tsx](components/principal/risk-breakdown-table.tsx)
 - [x] Intervention pipeline counts (DRAFT / PENDING_APPROVAL / ACTIVE / COMPLETED / CANCELLED) via `getInterventionPipeline`; CTA links to the approval queue
 - [x] Principal nav wired in [components/roles/principal/principal-config.ts](components/roles/principal/principal-config.ts)
@@ -672,11 +672,11 @@ Ready for Phase 3 (Intervention Module) or Phase 4 (Algorithmic Engine), dependi
 - [x] Revocation degrades features without deleting data (Phase 6 wired the AI-narrative consent gate)
 
 ### 7.2 Bias Monitoring *(✅ 2026-05-15, Phase 7 governance core)*
-- [x] Dashboard: risk band distribution across sex / learning modality / SPED status — landed in Phase 5
+- [x] Dashboard: risk band distribution across sex / learning modality / SPED status — landed in Phase 5 — **correction (2026-08-27): the SPED axis was never built.** `getBiasBreakdowns` covers sex and learning modality only; grade level and section come from the separate `getRiskBreakdownByGrade` / `getRiskBreakdownBySection` functions. No SPED axis exists in any of them. See Phase 11 carry-forward.
 - [x] Disparity threshold flags — landed in Phase 5
 - [x] **Disparity threshold now admin-tunable** — `AlgorithmConfig.biasThresholds.highRateMultiplier` (migration `20260515153207_add_risk_override_governance`). Editable in [admin algorithm form](../components/roles/admin/algorithm-config-form.tsx); read in [principal dashboard](app/principal/dashboard/page.tsx). Default 0.5 (+50%).
 - [x] Principal drill-down — already present via [components/principal/risk-breakdown-table.tsx](components/principal/risk-breakdown-table.tsx)
-- [x] Schema: `BiasMetric` (computed snapshots) — **resolved 2026-07-25 (Phase 8.0.3): will not be built.** Compute-on-read is the final answer at this scale. At ~420 students the precomputed snapshot buys no measurable performance and introduces a staleness failure mode (a stored metric disagreeing with the dashboard after an engine run). Spec §12 lists the model, but the *capability* — bias distribution across sex / modality / SPED with disparity flags — is delivered by `getBiasBreakdowns`. Revisit only if the population grows an order of magnitude.
+- [x] Schema: `BiasMetric` (computed snapshots) — **resolved 2026-07-25 (Phase 8.0.3): will not be built.** Compute-on-read is the final answer at this scale. At ~420 students the precomputed snapshot buys no measurable performance and introduces a staleness failure mode (a stored metric disagreeing with the dashboard after an engine run). Spec §12 lists the model, but the *capability* — bias distribution with disparity flags — is delivered by `getBiasBreakdowns`. Revisit only if the population grows an order of magnitude. **Correction (2026-08-27): the SPED axis named here was never built.** `getBiasBreakdowns` covers sex and learning modality only. See Phase 11 carry-forward.
 
 ### 7.3 Override Workflow *(✅ 2026-05-15)*
 - [x] Schema: new `RiskOverride` model (migration `20260515153207_add_risk_override_governance`); snapshots originalScore + originalBand at the moment of override so the override survives engine recomputes
@@ -823,7 +823,7 @@ Counselors, principals, teachers, and admin couldn't find specific students exce
 
 **Pages wired:**
 - `/counselor/caseload` — name/LRN search + risk band (HIGH/MODERATE/LOW/UNSCORED) + grade + section. Band filter **respects principal overrides** (Diego overridden to MODERATE shows up under MODERATE, not his algorithmic HIGH). Implementation: `getCaseloadWithRiskPaged` resolves matching enrollment IDs in a separate query when band is set, then constrains the main paginated query to that set.
-- `/principal/students` — name/LRN search + grade + section + SPED status. Server-side filter via `buildCaseloadWhere` extracted from [lib/student/queries.ts](../lib/student/queries.ts).
+- `/principal/students` — name/LRN search + grade + section. Server-side filter via `buildCaseloadWhere` extracted from [lib/student/queries.ts](../lib/student/queries.ts). **Correction (2026-08-27): SPED status is not a filter here.** `buildCaseloadWhere`'s `CaseloadFilters` type only accepts `search`, `sectionId`, and `gradeLevel` — no SPED filter exists in the query or the page UI. See Phase 11 carry-forward.
 - `/admin/consent` — name/LRN search + status (`ANY_REVOKED` / `ALL_GRANTED`). Refactored from client-state filter (with all 420 students loaded) to server-side filter + pagination. Removed ~50 lines of redundant in-component search/filter UI from [components/roles/admin/consent-manager.tsx](../components/roles/admin/consent-manager.tsx).
 - `/admin/users` — added name/email search on top of the existing role-filter pills. Search + role filter compose correctly (URL state preserves both when paginating).
 - `/teacher/student-risk` — name/LRN search + risk band + section. In-app filtering (small N per teacher: ≤6 sections × ≤40 students), grouped output preserved.
@@ -1221,6 +1221,123 @@ Built and run against a real Postgres, not reasoned about:
 - **The proxy simulation was the test worth writing.** Booting the container proves the app starts; sending `Host` / `X-Forwarded-Proto` headers that don't match `127.0.0.1` is what proves it will survive Traefik. It also surfaced the `__Secure-` cookie-prefix switch, which flips purely on the scheme in `AUTH_URL`.
 - **Image size was measured before being accepted.** A prune experiment inside the running container showed the obvious cuts save only ~210 MB and break the Prisma CLI (`@prisma/studio-core` is eagerly required), while the real weight — `next` + `@next` at 411 MB — cannot be deduplicated once the traced standalone tree and the full tree are merged at the same path. Recorded as a documented tradeoff rather than a half-done optimisation.
 - **Seeded credentials are now a deployment hazard, not a convenience.** `admin@school.edu / admin123` is in a public repo. The deployment guide makes changing or gating them a step, not a footnote.
+
+---
+
+## Phase 11 — Staff & Assignment Import ✅ *(complete 2026-08-27)*
+
+Beyond spec §6.11, which lists six wizard steps and no staff/section/subject
+import. Added because loading a real school otherwise means hand-entering
+hundreds of relationships through `/admin/setup` and `/admin/users`, and
+because staff and advisories change every August.
+
+- [x] `lib/import/staff.ts` + `app/actions/import/staff.ts` — role mapping,
+      bcrypt at cost 10, never overwrites an existing password on re-import.
+      Email pattern `firstinitial.lastname@school.edu`, shared default password
+      (`DEFAULT_STAFF_PASSWORD` in `app/actions/import/staff.ts` — not printed
+      here); a blank password column means "use the default", and any
+      supplied password must be at least 8 characters. Imported accounts must
+      have their password reset before any non-local use.
+- [x] `lib/import/assignments.ts` + `app/actions/import/assignments.ts` —
+      upserts Section and Subject, one adviser per section enforced in the
+      validator. 151 assignment fragments parsed from the source, 0 left
+      unresolved.
+- [x] Import Wizard 7 → 9 steps; staff precedes roster precedes assignments
+- [x] Roster importer maps `guardianName`, `guardianContact`, `spedStatus`
+- [x] Fixed the roster sample's `gradeLevel: "9"` / `section: "9-Newton"` bug —
+      it forked the section table against the `Grade 9` / `Newton` convention
+      in `prisma/seed.ts:29,34`
+- [x] Restored the drifted `SpedStatus` enum, `Student.spedStatus`, and
+      `SpedStatusChange` to `schema.prisma` (created in the init migration,
+      never dropped, but absent from the schema file)
+- [x] Loaded SY 2026-2027, now the sole active year: 576 students/enrollments,
+      17 sections across Grades 7-10, 31 staff, 163 teacher assignments
+      (17 adviser + 146 subject), 35 subjects, 1,728 consent records for the
+      year
+- [x] Verified by `scripts/verify-school-year-load.ts`: 576 enrollments, 17
+      sections, 17 advisers, 0 grades, 0 attendance, no cross-year section
+      leakage
+- [x] Demo year `SY 2025-2026` untouched: its 250 enrollments survive, Maria
+      Santos still enrolled — the reference scenario still walks there
+
+### Extraction defect caught before load
+
+The source workbook's `G9` and `G10 (2)` sheets each carried a stray
+`AVENTURINE (Winnie - 205)` block. Aventurine is a Grade 8 section only and is
+already captured natively in the `G8` sheet. A naive sheet-to-grade mapping
+would have relabelled those 68 rows and produced 644 students instead of 576.
+The extractor now skips and logs any block whose resolved canonical grade
+disagrees with its sheet.
+
+### Deliberately not built
+
+- **Grades and attendance for SY 2026-2027.** Neither exists in the source
+  workbooks — a full cell census found 112 stray attendance marks (95 in a stale
+  sheet), no date cells, and zero grade values. Real users generate them.
+- **SPED in the risk engine and bias dashboard.** `computeProfileBreakdown`
+  (`lib/risk/engine.ts:238`) still takes only `learningModality`, and
+  `getBiasBreakdowns` has no SPED axis, though this tracker's Phase 5 notes at
+  lines 598 and 675 claim otherwise. With every student `NONE` there is no
+  variance to surface. **Carry-forward item.**
+- **An importer for DepEd SF1/SF2/SF9.** Revisit when the registrar supplies
+  real exports.
+
+### Known data limitations
+
+Recorded in the generated `data-quality-report.md`, not in git (the source data
+is PII and `sample-import-data/` is gitignored):
+
+- 44 LRNs were minted (34 duplicate second-occurrences + malformed source
+  values). Replacements were minted so the import succeeds, but for the 34
+  duplicate pairs the true LRN↔name binding is unrecoverable from the file —
+  one real student in each pair now holds a wrong identifier and only the
+  registrar can say which.
+- 204 of 576 students (35%) had no recoverable sex; inferred from given name
+  and individually flagged for correction.
+- All birth dates, guardian names, and guardian contacts are synthetic. The
+  two source workbooks held 893 distinct real phone numbers; zero of them
+  reached the generated data.
+
+### Known code limitations (not fixed — recorded, not smuggled past)
+
+- **CSV row cap and transaction timeout disagree.** `lib/import/limits.ts`
+  caps uploads at `MAX_CSV_ROWS = 10_000`, but the bulk-commit transaction
+  options (`{ maxWait: 15_000, timeout: 120_000 }`, duplicated in
+  `app/actions/import/staff.ts`, `roster.ts`, `assignments.ts`, and
+  `scripts/load-real-school.ts`) practically support only about 2,300 roster
+  rows before Prisma's 120-second transaction timeout fires. A roster CSV
+  between roughly 3,000 and 10,000 rows passes `checkCsvLimits` and then fails
+  the commit with Prisma error P2028 after two minutes of rolled-back work.
+  Nothing enforces the batching the code comments prescribe. Not reachable at
+  this school's 576 rows, but not solved either — a real fix means chunking
+  the bulk commit the way the spec already prescribes for attendance's
+  monthly-chunk uploads.
+- **`schoolYearLabel` went optional on the wizard's shared types.**
+  `PreviewOk<T>` / `CommitOk` in `components/roles/admin/import-wizard.tsx`
+  now mark `schoolYearLabel` optional because staff import isn't
+  school-year-scoped. Each importer's own exported contract in
+  `app/actions/import/*.ts` still requires the field, and the only read site
+  is a guarded ternary, so nothing is broken today — but a future
+  year-scoped importer that forgets to return `schoolYearLabel` would now
+  compile silently instead of erroring at the `CsvStep` call site.
+- **`scripts/load-real-school.ts` duplicates persistence logic with no
+  enforcement.** It re-implements the persistence bodies of
+  `commitStaffAction`, `commitRosterAction`, and `commitAssignmentsAction`
+  because those Server Actions call `requireRole("ADMIN")` and can't run from
+  a CLI. Validators and `logAudit` calls are shared, not duplicated. A header
+  comment in the script names the three action files as source of truth and
+  says to change them together — but nothing enforces that; it can drift
+  silently.
+
+### Phase 11 retrospective
+
+- **The import wizard UI path itself has not been exercised end-to-end by a
+  human.** SY 2026-2027 was loaded via `npm run db:load:school`, which shares
+  the wizard's validators (`lib/import/*.ts`) and audit calls but
+  re-implements the persistence/transaction logic rather than going through
+  `commitStaffAction` / `commitRosterAction` / `commitAssignmentsAction`
+  directly. The wizard steps ship and typecheck, but a walkthrough by a real
+  admin clicking through nine steps is still outstanding.
 
 ---
 
