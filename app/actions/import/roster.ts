@@ -9,6 +9,13 @@ import { checkCsvLimits } from "@/lib/import/limits";
 import { validateRosterCsv, type RosterRow } from "@/lib/import/roster";
 import { ConsentScope } from "@prisma/client";
 
+// Prisma's default interactive-transaction timeout (5s) is sized for a live
+// request, not an admin-only bulk write. A full roster commit runs several
+// sequential round trips per row (student before-check + upsert, enrollment
+// upsert, three consent upserts), so it needs far more wall-clock room than
+// the default gives it. Same transaction boundary, longer timeout.
+const BULK_TRANSACTION_OPTIONS = { timeout: 60_000 };
+
 export type RosterPreview =
   | {
       ok: true;
@@ -227,7 +234,7 @@ export async function commitRosterAction(formData: FormData): Promise<RosterComm
         if (!beforeC) createdConsents++;
       }
     }
-  });
+  }, BULK_TRANSACTION_OPTIONS);
 
   await logAudit({
     action: "IMPORT",

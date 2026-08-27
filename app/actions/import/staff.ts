@@ -13,6 +13,14 @@ import { validateStaffCsv, type StaffRow } from "@/lib/import/staff";
 const DEFAULT_STAFF_PASSWORD = "aem2026";
 const BCRYPT_COST = 10;
 
+// Prisma's default interactive-transaction timeout (5s) is sized for a live
+// request, not an admin-only bulk write. Today's staff files are small, but
+// bulk imports are capped at 10,000 rows (lib/import/limits.ts), and a file
+// near that cap would need far more wall-clock room than the default gives
+// it. Same transaction boundary, longer timeout — applied consistently with
+// the other two import commit paths.
+const BULK_TRANSACTION_OPTIONS = { timeout: 60_000 };
+
 export type StaffPreview =
   | {
       ok: true;
@@ -147,7 +155,7 @@ export async function commitStaffAction(formData: FormData): Promise<StaffCommit
         updated++;
       }
     }
-  });
+  }, BULK_TRANSACTION_OPTIONS);
 
   await logAudit({
     action: "IMPORT",

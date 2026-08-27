@@ -8,6 +8,14 @@ import { parseCsv } from "@/lib/import/csv";
 import { checkCsvLimits } from "@/lib/import/limits";
 import { validateAssignmentsCsv, type AssignmentRow } from "@/lib/import/assignments";
 
+// Prisma's default interactive-transaction timeout (5s) is sized for a live
+// request, not an admin-only bulk write. A full assignments commit runs
+// several sequential round trips per row (section lookup/upsert, subject
+// lookup/upsert, assignment before-check + upsert), so it needs far more
+// wall-clock room than the default gives it. Same transaction boundary,
+// longer timeout.
+const BULK_TRANSACTION_OPTIONS = { timeout: 60_000 };
+
 export type AssignmentsPreview =
   | {
       ok: true;
@@ -213,7 +221,7 @@ export async function commitAssignmentsAction(formData: FormData): Promise<Assig
         }
       }
     }
-  });
+  }, BULK_TRANSACTION_OPTIONS);
 
   await logAudit({
     action: "IMPORT",
