@@ -32,6 +32,12 @@ enum Sex {
   FEMALE
 }
 
+enum SpedStatus {
+  NONE
+  IEP
+  ACCOMMODATIONS
+}
+
 enum LearningModality {
   FACE_TO_FACE
   MODULAR
@@ -338,6 +344,7 @@ model Student {
   middleName      String?
   sex             Sex
   birthDate       DateTime
+  spedStatus      SpedStatus @default(NONE)
   guardianName    String?
   guardianContact String?
   createdAt       DateTime   @default(now())
@@ -345,6 +352,7 @@ model Student {
 
   enrollments       StudentEnrollment[]
   consentRecords    ConsentRecord[]
+  spedStatusChanges SpedStatusChange[]
   referrals         InterventionReferral[]
 
   @@index([lastName, firstName])
@@ -448,6 +456,19 @@ model ConsentRecord {
   notes     String?
 
   @@unique([studentId, scope])
+  @@index([studentId])
+}
+
+model SpedStatusChange {
+  id          String     @id @default(cuid())
+  studentId   String
+  student     Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  fromStatus  SpedStatus
+  toStatus    SpedStatus
+  effectiveAt DateTime
+  changedById String?
+  notes       String?
+
   @@index([studentId])
 }
 
