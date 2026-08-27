@@ -46,8 +46,21 @@ const SCHOOL_YEAR_END = "2027-05-31";
 // request. The roster stage runs hundreds of rows (each with a handful of
 // before-check + upsert round trips) inside one transaction, matching the
 // action's transaction boundary — so it needs more wall-clock room here than
-// it would from a warm server connection. Same transaction, longer timeout.
-const BULK_TRANSACTION_OPTIONS = { timeout: 60_000 };
+// it would from a warm server connection. 120s comfortably covers a realistic
+// single-school-year roster: the real dataset (576 students, 163 assignments,
+// 31 staff) runs end to end in ~23s, so this leaves roughly 4x headroom past
+// any plausible junior high school enrolment. It is not sized for the 10,000-
+// row cap in lib/import/limits.ts — an import approaching that cap should be
+// split into batches (the spec already prescribes this for attendance, via
+// monthly chunks) rather than given a multi-minute timeout that just holds a
+// transaction open longer before it eventually fails.
+//
+// maxWait is a separate bound: it caps how long Prisma waits to acquire a
+// connection to *start* the transaction (failure mode P2024), not how long
+// the transaction body may run (timeout, failure mode P2028). DATABASE_URL
+// sets no connection_limit, so a bulk import shares its pool with ordinary
+// web traffic; 15s gives it room to start even when the pool is busy.
+const BULK_TRANSACTION_OPTIONS = { maxWait: 15_000, timeout: 120_000 };
 
 const CSV_DIR = path.resolve(__dirname, "..", "sample-import-data", "generated");
 const STAFF_CSV = path.join(CSV_DIR, "staff.csv");
@@ -159,7 +172,7 @@ async function loadStaff(csvText: string): Promise<{ total: number; created: num
         updated++;
       }
     }
-  });
+  }, BULK_TRANSACTION_OPTIONS);
 
   return { total: validation.total, created, updated };
 }

@@ -14,12 +14,22 @@ const DEFAULT_STAFF_PASSWORD = "aem2026";
 const BCRYPT_COST = 10;
 
 // Prisma's default interactive-transaction timeout (5s) is sized for a live
-// request, not an admin-only bulk write. Today's staff files are small, but
-// bulk imports are capped at 10,000 rows (lib/import/limits.ts), and a file
-// near that cap would need far more wall-clock room than the default gives
-// it. Same transaction boundary, longer timeout — applied consistently with
-// the other two import commit paths.
-const BULK_TRANSACTION_OPTIONS = { timeout: 60_000 };
+// request, not an admin-only bulk write. 120s comfortably covers a realistic
+// single-school-year roster: the real dataset (576 students, 163 assignments,
+// 31 staff) runs end to end in ~23s, so this leaves roughly 4x headroom past
+// any plausible junior high school enrolment. It is not sized for the 10,000-
+// row cap in lib/import/limits.ts — an import approaching that cap should be
+// split into batches (the spec already prescribes this for attendance, via
+// monthly chunks) rather than given a multi-minute timeout that just holds a
+// transaction open longer before it eventually fails. Applied consistently
+// with the other two import commit paths.
+//
+// maxWait is a separate bound: it caps how long Prisma waits to acquire a
+// connection to *start* the transaction (failure mode P2024), not how long
+// the transaction body may run (timeout, failure mode P2028). DATABASE_URL
+// sets no connection_limit, so a bulk import shares its pool with ordinary
+// web traffic; 15s gives it room to start even when the pool is busy.
+const BULK_TRANSACTION_OPTIONS = { maxWait: 15_000, timeout: 120_000 };
 
 export type StaffPreview =
   | {
