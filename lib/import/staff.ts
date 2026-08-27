@@ -31,6 +31,11 @@ function normalizeStatus(v: string | undefined): UserStatus {
 // Deliberately permissive: enough to catch a mangled column, not an RFC parser.
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Matches the minimum enforced for individually created accounts
+// (app/actions/admin/users.ts) so the two paths that mint a hashedPassword
+// agree on what counts as a valid one.
+const MIN_PASSWORD_LENGTH = 8;
+
 export function validateStaffCsv(parsed: ParsedCsv): ValidationResult<StaffRow> {
   const headerSetLower = new Set(parsed.headers.map((h) => h.toLowerCase()));
   const missingHeaders = STAFF_REQUIRED.filter((c) => !headerSetLower.has(c.toLowerCase()));
@@ -75,6 +80,10 @@ export function validateStaffCsv(parsed: ParsedCsv): ValidationResult<StaffRow> 
     if (!role) errors.push(`role must be ADMIN, TEACHER, COUNSELOR, or PRINCIPAL (got "${rawRole}")`);
 
     const password = get(raw, "password") || null;
+    if (password !== null && password.length < MIN_PASSWORD_LENGTH) {
+      errors.push(`password must be at least ${MIN_PASSWORD_LENGTH} characters`);
+    }
+
     const status = normalizeStatus(get(raw, "status"));
 
     if (errors.length > 0) return { ok: false, row: rowNum, errors, raw };

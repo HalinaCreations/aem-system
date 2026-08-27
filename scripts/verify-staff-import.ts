@@ -50,4 +50,27 @@ if (!bad.invalid[0].errors.some((e) => e.includes("role"))) fail("unmapped role 
 if (!bad.invalid[1].errors.some((e) => e.includes("email"))) fail("malformed email should be rejected");
 if (!bad.invalid[2].errors.some((e) => e.toLowerCase().includes("duplicate"))) fail("duplicate email should be rejected");
 
-console.log("PASS — staff validator: happy path, normalization, defaults, and 3 error classes");
+// 4. Password minimum length: explicit short password rejected (naming the
+// column), blank column still valid (defaulting path), long-enough password
+// preserved as-is.
+const pw = validateStaffCsv(
+  parseCsv(
+    [
+      "email,name,role,password",
+      "short@school.edu,Short Password,TEACHER,1234567",
+      "blank@school.edu,Blank Password,TEACHER,",
+      "long@school.edu,Long Enough,TEACHER,eightplus",
+    ].join("\n"),
+  ),
+);
+if (pw.invalid.length !== 1) fail(`expected 1 invalid row for password length, got ${pw.invalid.length}: ${JSON.stringify(pw.invalid)}`);
+if (!pw.invalid[0].errors.some((e) => e.toLowerCase().includes("password"))) {
+  fail(`short password error should name the password column: ${JSON.stringify(pw.invalid[0].errors)}`);
+}
+if (pw.valid.length !== 2) fail(`expected 2 valid rows (blank + long-enough password), got ${pw.valid.length}`);
+const blankRow = pw.valid.find((r) => r.data.email === "blank@school.edu");
+if (!blankRow || blankRow.data.password !== null) fail(`blank password column should still validate as null, got ${blankRow?.data.password}`);
+const longRow = pw.valid.find((r) => r.data.email === "long@school.edu");
+if (!longRow || longRow.data.password !== "eightplus") fail(`explicit valid password should be preserved, got ${longRow?.data.password}`);
+
+console.log("PASS — staff validator: happy path, normalization, defaults, 3 error classes, and password minimum length");
