@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState, useTransition, type ChangeEvent, type ReactNode } from "react";
+import { previewStaffAction, commitStaffAction, type StaffPreview, type StaffCommit } from "@/app/actions/import/staff";
 import { previewRosterAction, commitRosterAction, type RosterPreview, type RosterCommit } from "@/app/actions/import/roster";
+import { previewAssignmentsAction, commitAssignmentsAction, type AssignmentsPreview, type AssignmentsCommit } from "@/app/actions/import/assignments";
 import { previewGradesAction, commitGradesAction, type GradesPreview, type GradesCommit } from "@/app/actions/import/grades";
 import { previewAttendanceAction, commitAttendanceAction, type AttendancePreview, type AttendanceCommit } from "@/app/actions/import/attendance";
 import { previewBehavioralAction, commitBehavioralAction, type BehavioralPreview, type BehavioralCommit } from "@/app/actions/import/behavioral";
@@ -16,16 +18,18 @@ type Props = {
   defaultYearId: string | null;
 };
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 const STEP_LABELS: Record<Step, string> = {
   1: "Select school year",
-  2: "Roster CSV",
-  3: "Grades CSV",
-  4: "Attendance CSV",
-  5: "Behavioral CSV (optional)",
-  6: "Interventions CSV (optional)",
-  7: "SEL CSV (optional)",
+  2: "Staff CSV",
+  3: "Roster CSV",
+  4: "Assignments CSV",
+  5: "Grades CSV",
+  6: "Attendance CSV",
+  7: "Behavioral CSV (optional)",
+  8: "Interventions CSV (optional)",
+  9: "SEL CSV (optional)",
 };
 
 export default function ImportWizard({ years, defaultYearId }: Props) {
@@ -44,8 +48,8 @@ export default function ImportWizard({ years, defaultYearId }: Props) {
       />
 
       {/* Stepper */}
-      <ol className="grid gap-3 md:grid-cols-4 lg:grid-cols-7">
-        {[1, 2, 3, 4, 5, 6, 7].map((id) => {
+      <ol className="grid gap-3 md:grid-cols-5 lg:grid-cols-9">
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((id) => {
           const s = id as Step;
           const active = s === step;
           const enabled = s === 1 || dataStepsEnabled;
@@ -80,28 +84,75 @@ export default function ImportWizard({ years, defaultYearId }: Props) {
         />
       )}
 
-      {step >= 2 && step <= 7 && selectedYearId && selectedYear && (
+      {step >= 2 && step <= 9 && selectedYearId && selectedYear && (
         <>
           {step === 2 && (
+            <CsvStep<StaffRowPreview, StaffCommit>
+              title="Staff CSV"
+              schoolYearId={selectedYearId}
+              schoolYearLabel={selectedYear.label}
+              onChangeYear={() => setStep(1)}
+              requiredColumns={["email", "name", "role"]}
+              optionalColumns={["password", "status"]}
+              hints={
+                <p>
+                  <code className="font-mono">role</code> is one of <code>ADMIN</code>, <code>TEACHER</code>,{" "}
+                  <code>COUNSELOR</code>, <code>PRINCIPAL</code>. Leave <code className="font-mono">password</code> blank
+                  to apply the shared default. Re-importing never overwrites an existing user&apos;s password.
+                  Import staff <strong>before</strong> assignments — assignment rows resolve teachers by email.
+                </p>
+              }
+              sampleFileName="staff-sample.csv"
+              sampleRows={[
+                { email: "m.carandang@school.edu", name: "CARANDANG, Mary Jane S.", role: "PRINCIPAL", password: "", status: "ACTIVE" },
+                { email: "a.rosales@school.edu", name: "ROSALES, Ann Charise M.", role: "COUNSELOR", password: "", status: "ACTIVE" },
+                { email: "j.gabog@school.edu", name: "GABOG, Jonas M.", role: "TEACHER", password: "", status: "ACTIVE" },
+              ]}
+              previewAction={previewStaffAction}
+              commitAction={commitStaffAction}
+              previewHeaders={["Row", "Email", "Name", "Role", "Status"]}
+              renderRow={(r) => [
+                <td key="row" className="px-2 py-2 text-slate-500">{r.row}</td>,
+                <td key="email" className="px-2 py-2 font-mono">{r.data.email}</td>,
+                <td key="name" className="px-2 py-2">{r.data.name}</td>,
+                <td key="role" className="px-2 py-2">{r.data.role}</td>,
+                <td key="status" className="px-2 py-2">{r.data.status}</td>,
+              ]}
+              commitButtonLabel={(n) => `Commit ${n} staff row(s)`}
+              renderSuccess={(c) => (
+                <ul className="mt-2 list-disc pl-5 text-xs">
+                  <li>{c.created} user(s) created</li>
+                  <li>{c.updated} user(s) updated</li>
+                </ul>
+              )}
+            />
+          )}
+
+          {step === 3 && (
             <CsvStep<RosterRowPreview, RosterCommit>
               title="Roster CSV"
               schoolYearId={selectedYearId}
               schoolYearLabel={selectedYear.label}
               onChangeYear={() => setStep(1)}
               requiredColumns={["lrn", "firstName", "lastName", "sex", "birthDate", "gradeLevel", "section"]}
-              optionalColumns={["middleName", "learningModality", "spedStatus"]}
+              optionalColumns={["middleName", "learningModality", "guardianName", "guardianContact", "spedStatus"]}
               hints={
                 <>
                   <p>
                     <code className="font-mono">birthDate</code> accepts <code>YYYY-MM-DD</code> or <code>MM/DD/YYYY</code>.
                     <code className="font-mono"> sex</code> accepts <code>MALE</code> / <code>FEMALE</code> (or M/F).
                   </p>
+                  <p>
+                    <code className="font-mono">gradeLevel</code> is the full label (<code>Grade 9</code>) and{" "}
+                    <code className="font-mono">section</code> is the bare name (<code>Newton</code>) — not{" "}
+                    <code>9-Newton</code>. Sections are keyed on the pair, so mixing conventions creates duplicates.
+                  </p>
                 </>
               }
               sampleFileName="roster-sample.csv"
               sampleRows={[
-                { lrn: "136800010001", firstName: "Maria", lastName: "Santos", middleName: "Dela Cruz", sex: "FEMALE", birthDate: "2010-04-12", gradeLevel: "9", section: "9-Newton", learningModality: "FACE_TO_FACE", spedStatus: "NONE" },
-                { lrn: "136800010002", firstName: "Juan", lastName: "Reyes", middleName: "", sex: "MALE", birthDate: "07/30/2010", gradeLevel: "9", section: "9-Curie", learningModality: "MODULAR", spedStatus: "IEP" },
+                { lrn: "136800010001", firstName: "Maria", lastName: "Santos", middleName: "Dela Cruz", sex: "FEMALE", birthDate: "2010-04-12", gradeLevel: "Grade 9", section: "Newton", learningModality: "FACE_TO_FACE", guardianName: "Ana Santos", guardianContact: "09171234567", spedStatus: "NONE" },
+                { lrn: "136800010002", firstName: "Juan", lastName: "Reyes", middleName: "", sex: "MALE", birthDate: "07/30/2010", gradeLevel: "Grade 9", section: "Curie", learningModality: "MODULAR", guardianName: "Rosa Reyes", guardianContact: "09181234567", spedStatus: "NONE" },
               ]}
               previewAction={previewRosterAction}
               commitAction={commitRosterAction}
@@ -127,7 +178,50 @@ export default function ImportWizard({ years, defaultYearId }: Props) {
             />
           )}
 
-          {step === 3 && (
+          {step === 4 && (
+            <CsvStep<AssignmentsRowPreview, AssignmentsCommit>
+              title="Assignments CSV"
+              schoolYearId={selectedYearId}
+              schoolYearLabel={selectedYear.label}
+              onChangeYear={() => setStep(1)}
+              requiredColumns={["email", "gradeLevel", "section"]}
+              optionalColumns={["subjectCode", "subjectName", "isAdviser"]}
+              hints={
+                <p>
+                  Leave <code className="font-mono">subjectCode</code> and <code className="font-mono">subjectName</code>{" "}
+                  blank and set <code className="font-mono">isAdviser</code> to <code>true</code> for an advisory row.
+                  Sections and subjects are created automatically. Use{" "}
+                  <code className="font-mono">gradeLevel</code> = <code>Grade 9</code> and{" "}
+                  <code className="font-mono">section</code> = <code>Moonstone</code> — bare section names, no grade prefix.
+                </p>
+              }
+              sampleFileName="assignments-sample.csv"
+              sampleRows={[
+                { email: "j.gabog@school.edu", gradeLevel: "Grade 9", section: "Musgravite", subjectCode: "", subjectName: "", isAdviser: "true" },
+                { email: "j.gabog@school.edu", gradeLevel: "Grade 9", section: "Morganite", subjectCode: "ENG9", subjectName: "English 9", isAdviser: "false" },
+              ]}
+              previewAction={previewAssignmentsAction}
+              commitAction={commitAssignmentsAction}
+              previewHeaders={["Row", "Teacher", "Grade · Section", "Subject", "Adviser"]}
+              renderRow={(r) => [
+                <td key="row" className="px-2 py-2 text-slate-500">{r.row}</td>,
+                <td key="email" className="px-2 py-2 font-mono">{r.data.email}</td>,
+                <td key="sec" className="px-2 py-2">{r.data.gradeLevel} · {r.data.section}</td>,
+                <td key="subj" className="px-2 py-2">{r.data.subjectCode ?? "—"}</td>,
+                <td key="adv" className="px-2 py-2">{r.data.isAdviser ? "Yes" : "—"}</td>,
+              ]}
+              commitButtonLabel={(n, label) => `Commit ${n} assignment(s) to ${label}`}
+              renderSuccess={(c) => (
+                <ul className="mt-2 list-disc pl-5 text-xs">
+                  <li>{c.created.sections} section(s) created</li>
+                  <li>{c.created.subjects} subject(s) created</li>
+                  <li>{c.created.assignments} assignment(s) created</li>
+                </ul>
+              )}
+            />
+          )}
+
+          {step === 5 && (
             <CsvStep<GradesRowPreview, GradesCommit>
               title="Grades CSV"
               schoolYearId={selectedYearId}
@@ -167,7 +261,7 @@ export default function ImportWizard({ years, defaultYearId }: Props) {
             />
           )}
 
-          {step === 4 && (
+          {step === 6 && (
             <CsvStep<AttendanceRowPreview, AttendanceCommit>
               title="Attendance CSV"
               schoolYearId={selectedYearId}
@@ -206,7 +300,7 @@ export default function ImportWizard({ years, defaultYearId }: Props) {
             />
           )}
 
-          {step === 5 && (
+          {step === 7 && (
             <CsvStep<BehavioralRowPreview, BehavioralCommit>
               title="Behavioral CSV (optional)"
               schoolYearId={selectedYearId}
@@ -248,7 +342,7 @@ export default function ImportWizard({ years, defaultYearId }: Props) {
             />
           )}
 
-          {step === 6 && (
+          {step === 8 && (
             <CsvStep<InterventionsRowPreview, InterventionsCommit>
               title="Historical interventions CSV (optional)"
               schoolYearId={selectedYearId}
@@ -298,7 +392,7 @@ export default function ImportWizard({ years, defaultYearId }: Props) {
             />
           )}
 
-          {step === 7 && (
+          {step === 9 && (
             <CsvStep<SELRowPreview, SELCommit>
               title="SEL assessments CSV (optional)"
               schoolYearId={selectedYearId}
@@ -409,7 +503,9 @@ function YearPickerStep({
 
 type PreviewOk<T> = {
   ok: true;
-  schoolYearLabel: string;
+  // Optional: Staff isn't school-year-scoped, so its preview/commit results
+  // carry no schoolYearLabel — every other importer's does.
+  schoolYearLabel?: string;
   total: number;
   validCount: number;
   invalidCount: number;
@@ -417,10 +513,12 @@ type PreviewOk<T> = {
   errors: { row: number; messages: string[]; raw: Record<string, string> }[];
 };
 type PreviewShape<T> = PreviewOk<T> | { ok: false; error: string };
-type CommitOk = { ok: true; schoolYearLabel: string };
+type CommitOk = { ok: true; schoolYearLabel?: string };
 type CommitShape = CommitOk | { ok: false; error: string };
 
 // Concrete row types reused for prop typing (matches the server-action output exactly).
+type StaffRowPreview = NonNullable<Extract<StaffPreview, { ok: true }>["previewRows"][number]>["data"];
+type AssignmentsRowPreview = NonNullable<Extract<AssignmentsPreview, { ok: true }>["previewRows"][number]>["data"];
 type RosterRowPreview = NonNullable<Extract<RosterPreview, { ok: true }>["previewRows"][number]>["data"];
 type GradesRowPreview = NonNullable<Extract<GradesPreview, { ok: true }>["previewRows"][number]>["data"];
 type AttendanceRowPreview = NonNullable<Extract<AttendancePreview, { ok: true }>["previewRows"][number]>["data"];
@@ -458,7 +556,7 @@ function CsvStep<T, C extends CommitShape>({
   commitAction: (fd: FormData) => Promise<C>;
   previewHeaders: string[];
   renderRow: (row: { row: number; data: T }) => ReactNode[];
-  commitButtonLabel: (validCount: number, schoolYearLabel: string) => string;
+  commitButtonLabel: (validCount: number, schoolYearLabel?: string) => string;
   renderSuccess: (committed: Extract<C, { ok: true }>) => ReactNode;
 }) {
   const [csvText, setCsvText] = useState("");
@@ -659,7 +757,7 @@ function CsvStep<T, C extends CommitShape>({
 
       {committed && (
         <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-          <p className="font-semibold">Import complete — {committed.schoolYearLabel}</p>
+          <p className="font-semibold">Import complete{committed.schoolYearLabel ? ` — ${committed.schoolYearLabel}` : ""}</p>
           {renderSuccess(committed)}
           <p className="mt-2 text-xs text-emerald-700">Audit log entry created.</p>
         </div>
