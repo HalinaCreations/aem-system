@@ -595,7 +595,7 @@ Ready for Phase 3 (Intervention Module) or Phase 4 (Algorithmic Engine), dependi
 
 ### 5.3 Principal Dashboards *(✅ 2026-05-15)*
 - [x] School-Wide Dashboard at [/principal/dashboard](app/principal/dashboard/page.tsx) with drill-down by grade, section, demographic
-- [x] Risk distribution by grade level, section, sex, SPED status, learning modality via [lib/risk/queries.ts](lib/risk/queries.ts) (`getRiskBreakdownByGrade`, `getRiskBreakdownBySection`, `getBiasBreakdowns`) — **correction (2026-08-27): the SPED axis was never built.** `getBiasBreakdowns` covers grade level, section, sex, and learning modality only. See Phase 11 carry-forward.
+- [x] Risk distribution by grade level, section, sex, SPED status, learning modality via [lib/risk/queries.ts](lib/risk/queries.ts) (`getRiskBreakdownByGrade`, `getRiskBreakdownBySection`, `getBiasBreakdowns`) — **correction (2026-08-27): the SPED axis was never built.** `getBiasBreakdowns` covers sex and learning modality only; grade level and section come from the separate `getRiskBreakdownByGrade` / `getRiskBreakdownBySection` functions. No SPED axis exists in any of them. See Phase 11 carry-forward.
 - [x] Bias monitoring: disparity flag when a group's HIGH rate exceeds the school average by &gt;50%, surfaced inline in [components/principal/risk-breakdown-table.tsx](components/principal/risk-breakdown-table.tsx)
 - [x] Intervention pipeline counts (DRAFT / PENDING_APPROVAL / ACTIVE / COMPLETED / CANCELLED) via `getInterventionPipeline`; CTA links to the approval queue
 - [x] Principal nav wired in [components/roles/principal/principal-config.ts](components/roles/principal/principal-config.ts)
@@ -672,7 +672,7 @@ Ready for Phase 3 (Intervention Module) or Phase 4 (Algorithmic Engine), dependi
 - [x] Revocation degrades features without deleting data (Phase 6 wired the AI-narrative consent gate)
 
 ### 7.2 Bias Monitoring *(✅ 2026-05-15, Phase 7 governance core)*
-- [x] Dashboard: risk band distribution across sex / learning modality / SPED status — landed in Phase 5 — **correction (2026-08-27): the SPED axis was never built.** `getBiasBreakdowns` covers grade level, section, sex, and learning modality only. See Phase 11 carry-forward.
+- [x] Dashboard: risk band distribution across sex / learning modality / SPED status — landed in Phase 5 — **correction (2026-08-27): the SPED axis was never built.** `getBiasBreakdowns` covers sex and learning modality only; grade level and section come from the separate `getRiskBreakdownByGrade` / `getRiskBreakdownBySection` functions. No SPED axis exists in any of them. See Phase 11 carry-forward.
 - [x] Disparity threshold flags — landed in Phase 5
 - [x] **Disparity threshold now admin-tunable** — `AlgorithmConfig.biasThresholds.highRateMultiplier` (migration `20260515153207_add_risk_override_governance`). Editable in [admin algorithm form](../components/roles/admin/algorithm-config-form.tsx); read in [principal dashboard](app/principal/dashboard/page.tsx). Default 0.5 (+50%).
 - [x] Principal drill-down — already present via [components/principal/risk-breakdown-table.tsx](components/principal/risk-breakdown-table.tsx)
