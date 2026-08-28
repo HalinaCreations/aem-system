@@ -174,6 +174,7 @@ export default function RoleOverview({
     <div className="flex flex-col gap-6 lg:gap-8" style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* ── Welcome Banner ── */}
       <section
+        data-tour="workspace-hero"
         className="relative overflow-hidden rounded-3xl border border-slate-800 p-8 text-white shadow-lg"
       >
         <Image
@@ -214,7 +215,7 @@ export default function RoleOverview({
       {/* ── 2-Column Dashboard Grid ── */}
       <div className="grid gap-6 lg:grid-cols-12">
         {/* Left Column: Actionable Modules (70%) */}
-        <div className="flex flex-col gap-6 lg:col-span-8">
+        <div className="flex flex-col gap-6 lg:col-span-8" data-tour="available-modules">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-slate-800 tracking-tight">Available Modules</h2>
             <span className="text-xs text-slate-500 font-medium">Select a module to proceed</span>
@@ -223,6 +224,7 @@ export default function RoleOverview({
           <section className="grid gap-4 sm:grid-cols-2">
             {sections.map((s) => {
               const Icon = getSectionIcon(s.title);
+              const tourSlug = `module-${s.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
               const cardContent = (
                 <>
                   <div className={`inline-flex h-11 w-11 items-center justify-center rounded-2xl border transition-colors ${styles.accent}`}>
@@ -246,6 +248,7 @@ export default function RoleOverview({
                 <Link
                   key={s.title}
                   href={s.href}
+                  data-tour={tourSlug}
                   className={`group flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:border-slate-300 hover:shadow-md hover:-translate-y-0.5 ${styles.glow}`}
                 >
                   {cardContent}
@@ -253,6 +256,7 @@ export default function RoleOverview({
               ) : (
                 <div
                   key={s.title}
+                  data-tour={tourSlug}
                   className="flex flex-col justify-between rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 opacity-60"
                 >
                   {cardContent}
@@ -265,7 +269,7 @@ export default function RoleOverview({
         {/* Right Column: Metrics & Help Desk Sidebar (30%) */}
         <div className="flex flex-col gap-6 lg:col-span-4">
           {/* Metrics */}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4" data-tour="system-context-metrics">
             <h2 className="text-lg font-bold text-slate-800 tracking-tight">System Context</h2>
             <section className="grid gap-3">
               {metrics.map((m) => (
@@ -288,7 +292,7 @@ export default function RoleOverview({
           </div>
 
           {/* AI Literacy / Explainer Banner */}
-          <div className="rounded-2xl border border-slate-200 bg-slate-900 p-5 text-white shadow-sm flex flex-col gap-4 relative overflow-hidden">
+          <div data-tour="ai-literacy-card" className="rounded-2xl border border-slate-200 bg-slate-900 p-5 text-white shadow-sm flex flex-col gap-4 relative overflow-hidden">
             {/* Visual accent */}
             <div className="absolute right-0 bottom-0 h-16 w-16 bg-slate-800 rounded-full blur-xl opacity-50" />
             

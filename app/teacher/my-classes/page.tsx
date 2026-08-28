@@ -26,19 +26,20 @@ export default async function MyClassesPage() {
       />
 
       {/* Modern, sleek list layout instead of cards */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm" data-tour="teacher-classes-list">
         <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-4 flex items-center justify-between">
           <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Classroom Assignments</span>
           <span className="text-xs font-semibold text-slate-500">{sy.label} Term</span>
         </div>
         
         <div className="divide-y divide-slate-100">
-          {classes.map((c) => {
+          {classes.map((c, idx) => {
             const shortGrade = c.gradeLevel.match(/\d+/)?.[0] ?? c.gradeLevel.slice(0, 2);
             return (
               <Link
                 key={c.assignmentId}
                 href={`/teacher/my-classes/${c.assignmentId}`}
+                data-tour={idx === 0 ? "teacher-first-class-card" : undefined}
                 className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 hover:bg-slate-50/50 transition-colors"
               >
                 <div className="flex items-center gap-4">

@@ -43,7 +43,7 @@ export default async function TeacherReferPage() {
         <ReferralForm students={students} />
       )}
 
-      <section className="flex flex-col gap-3">
+      <section className="flex flex-col gap-3" data-tour="teacher-referral-history-list">
         <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
           Your referrals ({referrals.length})
         </h2>

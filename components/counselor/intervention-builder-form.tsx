@@ -139,9 +139,10 @@ export default function InterventionBuilderForm({ targets, prefill }: Props) {
   return (
     <form
       onSubmit={handleSubmit}
+      data-tour="intervention-builder-form"
       className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-white p-5"
     >
-      <fieldset className="flex flex-col gap-2">
+      <fieldset className="flex flex-col gap-2" data-tour="intervention-scope-fieldset">
         <legend className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
           Scope
         </legend>
@@ -176,14 +177,14 @@ export default function InterventionBuilderForm({ targets, prefill }: Props) {
       </fieldset>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <div>
+        <div data-tour="intervention-target-selector">
           <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
             Target
           </label>
           {targetField}
         </div>
 
-        <div>
+        <div data-tour="intervention-type-selector">
           <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
             Intervention type
           </label>
@@ -201,7 +202,7 @@ export default function InterventionBuilderForm({ targets, prefill }: Props) {
           </select>
         </div>
 
-        <div>
+        <div data-tour="intervention-start-date">
           <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
             Start date
           </label>
@@ -215,7 +216,7 @@ export default function InterventionBuilderForm({ targets, prefill }: Props) {
           />
         </div>
 
-        <div>
+        <div data-tour="intervention-end-date">
           <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
             End date (optional)
           </label>
@@ -229,7 +230,7 @@ export default function InterventionBuilderForm({ targets, prefill }: Props) {
         </div>
       </div>
 
-      <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <section className="rounded-xl border border-slate-200 bg-slate-50 p-4" data-tour="intervention-public-fields">
         <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
           Public plan fields
         </h3>
@@ -268,7 +269,7 @@ export default function InterventionBuilderForm({ targets, prefill }: Props) {
         </div>
       </section>
 
-      <section className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+      <section className="rounded-xl border border-amber-200 bg-amber-50 p-4" data-tour="intervention-sensitive-fields">
         <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
           Sensitive — counselor + principal only
         </h3>
@@ -304,6 +305,7 @@ export default function InterventionBuilderForm({ targets, prefill }: Props) {
         </p>
         <button
           type="submit"
+          data-tour="intervention-submit-btn"
           disabled={pending || (scope !== "SCHOOL" && !scopeTargetId)}
           className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
         >

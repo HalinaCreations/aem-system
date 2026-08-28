@@ -47,10 +47,11 @@ export default function ApprovalActions({ interventionId }: { interventionId: st
   }
 
   return (
-    <div className="mt-4 flex flex-col gap-3">
+    <div className="mt-4 flex flex-col gap-3" data-tour="principal-approval-actions">
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
+          data-tour="principal-approve-btn"
           onClick={handleApprove}
           disabled={pending}
           className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white hover:bg-emerald-700 disabled:bg-emerald-300"
@@ -59,6 +60,7 @@ export default function ApprovalActions({ interventionId }: { interventionId: st
         </button>
         <button
           type="button"
+          data-tour="principal-reject-btn"
           onClick={() => setShowRejectForm((v) => !v)}
           disabled={pending}
           className="rounded-lg border border-rose-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-rose-700 hover:bg-rose-50 disabled:opacity-50"

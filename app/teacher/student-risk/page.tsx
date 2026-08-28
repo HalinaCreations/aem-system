@@ -152,14 +152,16 @@ export default async function TeacherStudentRiskPage({
           </>
         }
       />
-      <ListToolbar
-        basePath="/teacher/student-risk"
-        searchPlaceholder="Search name or LRN…"
-        searchValue={search}
-        filters={filters}
-      />
+      <div data-tour="risk-filter-toolbar">
+        <ListToolbar
+          basePath="/teacher/student-risk"
+          searchPlaceholder="Search name or LRN…"
+          searchValue={search}
+          filters={filters}
+        />
+      </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white" data-tour="risk-roster-table">
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-slate-50/50 border-b border-slate-100 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">

@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { logoutAction } from "@/app/actions/auth";
 import { useSystemWorks } from "@/components/shell/system-works-context";
+import { useTutorial } from "@/components/tutorial/tutorial-context";
 import {
   Sidebar,
   SidebarContent,
@@ -69,6 +70,16 @@ function IconFolder() {
   );
 }
 
+function IconHelp() {
+  return (
+    <svg aria-hidden="true" className="h-4 w-4 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+      <path d="M12 17h.01" />
+    </svg>
+  );
+}
+
 function IconLogout() {
   return (
     <svg aria-hidden="true" className="h-4 w-4 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -99,6 +110,7 @@ export default function RoleSidebar({ role, badge, title, theme, sections }: Rol
   const router = useRouter();
   const { open } = useSidebar();
   const systemWorks = useSystemWorks();
+  const tutorial = useTutorial();
   const [hash, setHash] = useState("");
   const [pending, startTransition] = useTransition();
 
@@ -159,7 +171,7 @@ export default function RoleSidebar({ role, badge, title, theme, sections }: Rol
           </div>
         </SidebarHeader>
 
-        <SidebarContent>
+        <SidebarContent data-tour="sidebar-nav">
           <SidebarGroup>
             {open && <SidebarGroupLabel>Workspace</SidebarGroupLabel>}
             <SidebarMenu>
@@ -207,6 +219,16 @@ export default function RoleSidebar({ role, badge, title, theme, sections }: Rol
 
         <SidebarFooter>
           <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => tutorial.openGuideModal("features")}
+                className={!open ? "justify-center" : undefined}
+                title="System Startup Guide & Documentation"
+              >
+                <IconHelp />
+                <span className={open ? undefined : "sr-only"}>Help & Guides</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton onClick={handleLogout} disabled={pending} className={!open ? "justify-center" : undefined}>
                 <IconLogout />
