@@ -3,14 +3,20 @@
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { loginAction } from "@/app/actions/auth";
+import type { DevAccountGroup } from "@/lib/dev-accounts";
 
-export default function LoginForm() {
+export default function LoginForm({
+  devAccountGroups = [],
+}: {
+  devAccountGroups?: DevAccountGroup[];
+}) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
+  const [showDevAccounts, setShowDevAccounts] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -142,6 +148,77 @@ export default function LoginForm() {
           "Sign in →"
         )}
       </button>
+
+      {devAccountGroups.length > 0 && (
+        <div className="rounded-xl border border-dashed border-amber-300 bg-amber-50/60 px-4 py-3">
+          <button
+            type="button"
+            onClick={() => setShowDevAccounts((v) => !v)}
+            className="flex w-full items-center justify-between text-left"
+            aria-expanded={showDevAccounts}
+          >
+            <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-700">
+              <span className="rounded bg-amber-200 px-1.5 py-0.5 text-[10px] tracking-normal text-amber-900">
+                DEV
+              </span>
+              Test accounts
+            </span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-amber-600"
+              style={{
+                transform: showDevAccounts ? "rotate(180deg)" : "none",
+                transition: "transform 0.15s",
+              }}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+
+          {showDevAccounts && (
+            <div className="mt-3 space-y-4">
+              {devAccountGroups.map((group) => (
+                <div key={group.title}>
+                  <p className="text-[11px] font-semibold text-amber-800">{group.title}</p>
+                  <p className="text-[11px] text-amber-700/80">{group.hint}</p>
+                  <ul className="mt-2 space-y-1">
+                    {group.accounts.map((account) => (
+                      <li key={account.email}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEmail(account.email);
+                            setPassword(account.password);
+                            setError(null);
+                          }}
+                          className="flex w-full items-center gap-2 rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-left transition-colors hover:border-amber-400 hover:bg-amber-100/60"
+                          title={`Fill ${account.email} / ${account.password}`}
+                        >
+                          <span className="w-[68px] shrink-0 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                            {account.role}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-xs text-slate-700">{account.email}</span>
+                            <span className="block truncate text-[11px] text-slate-400">{account.label}</span>
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </form>
   );
 }

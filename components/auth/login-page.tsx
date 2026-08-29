@@ -1,7 +1,10 @@
 import LoginForm from "@/components/auth/login-form";
 import Image from "next/image";
+import { getDevAccountGroups } from "@/lib/dev-accounts";
 
 export default function LoginPage() {
+  const devAccountGroups = getDevAccountGroups();
+
   return (
     <main className="min-h-screen flex" style={{ fontFamily: "'Inter', sans-serif" }}>
 
@@ -103,7 +106,7 @@ export default function LoginPage() {
             <div className="my-8 h-px bg-slate-200" />
 
             {/* form — no wrapper card */}
-            <LoginForm />
+            <LoginForm devAccountGroups={devAccountGroups} />
 
             {/* footer */}
             <p className="mt-10 text-center text-xs text-slate-400">

@@ -9,9 +9,8 @@ import { logAudit } from "@/lib/audit";
 import { parseCsv } from "@/lib/import/csv";
 import { checkCsvLimits } from "@/lib/import/limits";
 import { validateStaffCsv, type StaffRow } from "@/lib/import/staff";
+import { DEFAULT_STAFF_PASSWORD } from "@/lib/dev-accounts";
 
-/** Applied when a row leaves the password column blank. Dev/demo only. */
-const DEFAULT_STAFF_PASSWORD = "changeme2026";
 const BCRYPT_COST = 10;
 
 // Prisma's default interactive-transaction timeout (5s) is sized for a live
