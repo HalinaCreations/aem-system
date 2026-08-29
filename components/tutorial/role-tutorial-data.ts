@@ -153,19 +153,19 @@ export const ROLE_TUTORIAL_DATA: Record<RoleName, RoleGuideDocument> = {
         title: "Algorithmic Calibration — Tuning the Risk Engine",
         badge: "Risk Engine (/admin/algorithm)",
         content:
-          "Calibrate 5 dimension weights (Grades, Attendance, Behavior, Trend, Subject Discrepancy), risk band cutoffs, and 8 pattern detector rules.",
-        actionHint: "Dimension weights must sum to exactly 100%.",
+          "Calibrate 5 dimension weights (Academic, Attendance, Behavioral, Intervention History, Profile), risk band cutoffs, and 8 pattern detector rules.",
+        actionHint: "Enter each weight as 0–100. The engine normalises them, so they need not sum to 100.",
         modalExplanation:
           "Saving changes creates an immutable version snapshot and triggers risk score recalculation.",
         processFlowSteps: [
-          "1. Adjust 5 weight sliders to sum to 100%",
+          "1. Adjust the 5 dimension weight inputs",
           "2. Set Moderate and High Risk cutoffs",
           "3. Toggle pattern detection rules",
           "4. Click [Save & Publish Version]",
         ],
         elements: [
-          "Dimension sliders — set % contribution per factor",
-          "Total sum indicator — warns if total is not 100%",
+          "Dimension weights — relative contribution per factor (0–100)",
+          "Normalisation — weights are scaled to their own total at scoring time",
           "Risk cutoffs — Moderate and High thresholds",
           "Save & Publish — commits version snapshot",
         ],
@@ -401,15 +401,15 @@ export const ROLE_TUTORIAL_DATA: Record<RoleName, RoleGuideDocument> = {
         summary:
           "Calibrate scoring weights, band cut-offs (Low, Moderate, High), and pattern detection thresholds. Every adjustment generates a versioned audit snapshot.",
         whatYouCanDo: [
-          "Adjust weights for the 5 core dimensions: Academic Performance, Attendance Rate, Behavioral Incidents, Grade Trend, and Subject Discrepancy.",
+          "Adjust weights for the 5 core dimensions: Academic, Attendance, Behavioral, Intervention History, and Profile (SPED / modality).",
           "Tune score thresholds for Moderate Risk (default 40.0) and High Risk (default 70.0).",
-          "Configure triggers for 8 pattern rules (e.g. Chronic Absenteeism, Sharp Grade Drop, High Absence/Passing Grade, etc.).",
+          "Toggle the 8 pattern rules: Academic Decline Cluster, Disengagement Signal, Crisis Warning, Recovery Tracking, Chronic Concern, and the three section-level rules (Concentrated Risk, Subject Struggle, Attendance Erosion).",
           "View history of all past parameter versions with author notes.",
         ],
         keyFunctions: [
           {
             name: "Weight Adjustment Slider",
-            description: "Rebalance dimension contributions ensuring total sum equals 100%.",
+            description: "Rebalance dimension contributions. Values are normalised against their own total, so any scale works.",
           },
           {
             name: "Pattern Toggle",
@@ -527,7 +527,7 @@ export const ROLE_TUTORIAL_DATA: Record<RoleName, RoleGuideDocument> = {
             stepNumber: 2,
             actionTitle: "Adjust Weights & Thresholds",
             pageRoute: "/admin/algorithm",
-            instructions: "Modify factor percentages ensuring a 100% total, and document the pedagogical justification.",
+            instructions: "Modify the dimension weights (0–100 each; the engine normalises them) and document the pedagogical justification.",
           },
           {
             stepNumber: 3,
@@ -848,7 +848,7 @@ export const ROLE_TUTORIAL_DATA: Record<RoleName, RoleGuideDocument> = {
         title: "How the System Works — AI Transparency & Formulas",
         badge: "AI Literacy (/learn)",
         content:
-          "Inspect the live mathematical formulas, factor weights (Grades, Attendance, Behavior), and 8 pattern detection rules that calculate risk scores.",
+          "Inspect the live mathematical formulas, the 5 factor weights (Academic, Attendance, Behavioral, Intervention History, Profile), and 8 pattern detection rules that calculate risk scores.",
         actionHint: "Read this to understand how student scores change after grade/attendance submissions.",
         processFlowSteps: [
           "1. Review factor percentage weights",
@@ -856,7 +856,7 @@ export const ROLE_TUTORIAL_DATA: Record<RoleName, RoleGuideDocument> = {
           "3. Inspect data privacy scope boundaries",
         ],
         elements: [
-          "Factor sliders — Grades/Attendance/Behavior %",
+          "Factor weights — the 5 weighted dimensions and their share",
           "Pattern rules — trigger conditions",
           "Formula card — linear scoring equation",
           "Privacy table — role access matrix",
@@ -1453,7 +1453,7 @@ export const ROLE_TUTORIAL_DATA: Record<RoleName, RoleGuideDocument> = {
         summary:
           "Automated detection center highlighting systemic anomalies across individual students, sections, and grade cohorts.",
         whatYouCanDo: [
-          "Review triggers across 8 rule types: Chronic Absenteeism, Consecutive Absences, Sharp Grade Drop, Multi-Subject Failing, High Absence with Passing Grades, Subject Discrepancy, Section-Level Decline, and Grade-Wide Inequity.",
+          "Review triggers across 8 rule types — student-level: Academic Decline Cluster, Disengagement Signal, Crisis Warning, Recovery Tracking, Chronic Concern; section-level: Concentrated Risk, Subject Struggle, Attendance Erosion.",
           "Inspect affected students, severity indicators, and rule trigger details.",
           "Acknowledge, link to an intervention, or dismiss with documented reasoning.",
         ],
@@ -1469,7 +1469,7 @@ export const ROLE_TUTORIAL_DATA: Record<RoleName, RoleGuideDocument> = {
         ],
         privacyAndScope: "Patterns are calculated purely from objective attendance and grading records.",
         tips: [
-          "Pay close attention to 'Subject Discrepancy' patterns—they often indicate localized classroom or curricular challenges rather than student inability.",
+          "Pay close attention to 'Subject Struggle' patterns—they often indicate localized classroom or curricular challenges rather than student inability.",
         ],
       },
       {

@@ -60,27 +60,37 @@ export function TutorialProvider({
 
   const storageKey = useMemo(() => `aem_tutorial_seen_v2_${role}_${userId}`, [role, userId]);
 
-  // Check on mount for active tour in progress across page changes or first login prompt
+  // Check on mount for active tour in progress across page changes or first login prompt.
+  // Both branches hand off to a timer: browser storage is an external store, and
+  // setting state for it synchronously in the effect body cascades a second render.
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
     try {
+      let restored = false;
       const savedSession = sessionStorage.getItem(TOUR_SESSION_KEY);
       if (savedSession) {
         const parsed = JSON.parse(savedSession);
         if (parsed && parsed.isTourActive && parsed.role === role && parsed.userId === userId) {
-          setIsTourActive(true);
-          setCurrentStepIndex(parsed.stepIndex || 0);
-          return;
+          const savedStepIndex = parsed.stepIndex || 0;
+          restored = true;
+          timer = setTimeout(() => {
+            setIsTourActive(true);
+            setCurrentStepIndex(savedStepIndex);
+          }, 0);
         }
       }
 
-      const hasSeen = localStorage.getItem(storageKey);
-      if (!hasSeen) {
-        const timer = setTimeout(() => {
+      if (!restored && !localStorage.getItem(storageKey)) {
+        timer = setTimeout(() => {
           setIsFirstLoginPromptOpen(true);
         }, 500);
-        return () => clearTimeout(timer);
       }
     } catch {}
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [role, userId, storageKey]);
 
   // Navigate to a specific tour step, automatically routing to that page if needed

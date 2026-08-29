@@ -70,8 +70,9 @@ export function TutorialSpotlight() {
 
   // Handle step change and element finding with retries
   useEffect(() => {
+    // No clearing needed on the inactive path — the component renders null while
+    // the tour is off, and findTarget() re-measures before the next step paints.
     if (!isTourActive || !currentStep) {
-      setTargetRect(null);
       return;
     }
 

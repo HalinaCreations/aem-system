@@ -3,7 +3,6 @@
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { useTutorial } from "./tutorial-context";
-import type { FeatureDocumentation, RoleWorkflow } from "./tutorial-types";
 
 export function TutorialGuideModal() {
   const {
