@@ -63,6 +63,7 @@ export default function UsersManager({
         actions={
           <button
             onClick={() => setIsModalOpen(true)}
+            data-tour="add-staff-btn"
             className="rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition-all"
             style={{ background: "linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)" }}
           >
@@ -73,7 +74,7 @@ export default function UsersManager({
 
       {isModalOpen && <CreateUserCard onClose={() => setIsModalOpen(false)} />}
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6">
+      <section className="rounded-2xl border border-slate-200 bg-white p-6" data-tour="admin-users-table">
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>

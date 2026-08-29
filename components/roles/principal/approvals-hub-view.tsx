@@ -41,10 +41,11 @@ export default function ApprovalsHubView({ syLabel, pending, approved }: Props) 
       />
 
       {/* Tabs Switcher */}
-      <div className="flex border-b border-slate-200 gap-2 overflow-x-auto">
+      <div className="flex border-b border-slate-200 gap-2 overflow-x-auto" data-tour="principal-approval-tabs">
         <button
           type="button"
           onClick={() => setActiveTab("pending")}
+          data-tour="principal-tab-pending"
           className={`flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
             activeTab === "pending"
               ? "border-amber-500 text-amber-900 bg-amber-50/30"
@@ -63,6 +64,7 @@ export default function ApprovalsHubView({ syLabel, pending, approved }: Props) 
         <button
           type="button"
           onClick={() => setActiveTab("approved")}
+          data-tour="principal-tab-approved"
           className={`flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
             activeTab === "approved"
               ? "border-emerald-600 text-emerald-900 bg-emerald-50/30"
@@ -87,7 +89,7 @@ export default function ApprovalsHubView({ syLabel, pending, approved }: Props) 
               No pending intervention proposals requiring your approval right now.
             </div>
           ) : (
-            <ul className="flex flex-col gap-4">
+            <ul className="flex flex-col gap-4" data-tour="principal-pending-proposals-list">
               {pending.map((p) => (
                 <li key={p.id} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col gap-4">
                   <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3">

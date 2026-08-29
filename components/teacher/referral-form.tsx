@@ -36,8 +36,8 @@ export default function ReferralForm({ students }: { students: Student[] }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5">
-      <label className="flex flex-col gap-1 text-sm">
+    <form onSubmit={handleSubmit} data-tour="teacher-refer-form" className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5">
+      <label className="flex flex-col gap-1 text-sm" data-tour="teacher-refer-student-select">
         <span className="font-medium text-slate-700">Student</span>
         <Select
           value={studentId}
@@ -55,7 +55,7 @@ export default function ReferralForm({ students }: { students: Student[] }) {
         </Select>
       </label>
 
-      <label className="flex flex-col gap-1 text-sm">
+      <label className="flex flex-col gap-1 text-sm" data-tour="teacher-refer-type-select">
         <span className="font-medium text-slate-700">Suggested intervention type</span>
         <Select
           value={suggestedType}
@@ -72,7 +72,7 @@ export default function ReferralForm({ students }: { students: Student[] }) {
         </Select>
       </label>
 
-      <label className="flex flex-col gap-1 text-sm">
+      <label className="flex flex-col gap-1 text-sm" data-tour="teacher-refer-rationale-input">
         <span className="font-medium text-slate-700">Reason / rationale</span>
         <textarea
           value={rationale}
@@ -85,7 +85,7 @@ export default function ReferralForm({ students }: { students: Student[] }) {
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-sm">
+      <label className="flex flex-col gap-1 text-sm" data-tour="teacher-refer-urgency-select">
         <span className="font-medium text-slate-700">Urgency</span>
         <Select
           value={urgency}
@@ -106,6 +106,7 @@ export default function ReferralForm({ students }: { students: Student[] }) {
 
       <button
         type="submit"
+        data-tour="teacher-refer-submit-btn"
         disabled={pending || !studentId || !rationale}
         className="w-fit rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
       >

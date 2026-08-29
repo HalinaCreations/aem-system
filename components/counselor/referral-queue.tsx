@@ -74,9 +74,9 @@ export default function ReferralQueue({ referrals }: { referrals: ReferralCard[]
     return <p className="text-sm text-slate-500">No pending referrals.</p>;
   }
   return (
-    <ul className="flex flex-col gap-3">
+    <ul className="flex flex-col gap-3" data-tour="counselor-referrals-list">
       {referrals.map((r) => (
-        <li key={r.id} className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5">
+        <li key={r.id} className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5" data-tour="counselor-referral-card">
           <div className="flex items-center justify-between gap-3">
             <span className="font-semibold text-slate-800">{r.studentLabel}</span>
             <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${URGENCY_TONE[r.urgency] ?? ""}`}>
@@ -90,11 +90,14 @@ export default function ReferralQueue({ referrals }: { referrals: ReferralCard[]
           <div className="flex flex-wrap items-start gap-2">
             <Link
               href={`/counselor/interventions/new?fromReferral=${r.id}`}
+              data-tour="referral-accept-btn"
               className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700"
             >
               Accept &amp; create intervention
             </Link>
-            <DeclineBox referralId={r.id} />
+            <div data-tour="referral-decline-box">
+              <DeclineBox referralId={r.id} />
+            </div>
           </div>
         </li>
       ))}

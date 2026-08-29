@@ -266,11 +266,12 @@ export default function ClassDetail(props: Props) {
         </p>
       </header>
 
-      <nav className="flex flex-wrap gap-2">
+      <nav className="flex flex-wrap gap-2" data-tour="class-detail-nav-tabs">
         {tabs.map((t) => (
           <button
             key={t.id}
             type="button"
+            data-tour={`class-tab-${t.id}`}
             disabled={!t.enabled}
             onClick={() => setTab(t.id)}
             className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition ${

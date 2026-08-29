@@ -148,6 +148,7 @@ export default function InterventionsHubView({
         actions={
           <Link
             href="/counselor/interventions/new"
+            data-tour="new-intervention-btn"
             className="rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-sm hover:opacity-95 transition-all flex items-center gap-1.5"
             style={{ background: "linear-gradient(135deg, #059669 0%, #10b981 100%)" }}
           >
@@ -160,7 +161,7 @@ export default function InterventionsHubView({
       />
 
       {/* ── Overview Metric KPI Cards ──────────────────────────────────── */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-tour="interventions-kpis">
         {/* Active Plans */}
         <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm hover:border-emerald-200 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
@@ -227,10 +228,11 @@ export default function InterventionsHubView({
       </div>
 
       {/* ── Main Workspace Tabs ───────────────────────────────────────── */}
-      <div className="flex border-b border-slate-200 gap-1 overflow-x-auto">
+      <div className="flex border-b border-slate-200 gap-1 overflow-x-auto" data-tour="interventions-tabs">
         <button
           type="button"
           onClick={() => setActiveTab("all")}
+          data-tour="tab-all-interventions"
           className={`flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
             activeTab === "all"
               ? "border-emerald-700 text-emerald-800 bg-emerald-50/20"
@@ -249,6 +251,7 @@ export default function InterventionsHubView({
         <button
           type="button"
           onClick={() => setActiveTab("recommendations")}
+          data-tour="tab-ai-recommendations"
           className={`flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
             activeTab === "recommendations"
               ? "border-indigo-600 text-indigo-800 bg-indigo-50/20"
@@ -269,6 +272,7 @@ export default function InterventionsHubView({
         <button
           type="button"
           onClick={() => setActiveTab("outcomes")}
+          data-tour="tab-outcomes"
           className={`flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
             activeTab === "outcomes"
               ? "border-sky-600 text-sky-800 bg-sky-50/20"

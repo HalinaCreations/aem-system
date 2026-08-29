@@ -214,7 +214,7 @@ export default function InterventionFeedbackClient({ interventions }: Props) {
         </div>
 
         {/* Master List Card */}
-        <div className="flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white min-h-[400px]">
+        <div className="flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white min-h-[400px]" data-tour="feedback-master-list">
           <div className="border-b border-slate-100 bg-slate-50/50 px-4 py-3 flex items-center justify-between">
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Interventions ({filtered.length})</span>
           </div>
@@ -296,7 +296,7 @@ export default function InterventionFeedbackClient({ interventions }: Props) {
         {selectedIntervention ? (
           <div className="flex flex-col gap-4">
             {/* Header Information Card */}
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm" data-tour="feedback-detail-header">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center flex-wrap gap-2">
@@ -363,10 +363,11 @@ export default function InterventionFeedbackClient({ interventions }: Props) {
             </div>
 
             {/* Toggle tabs for View */}
-            <div className="flex border-b border-slate-200/80">
+            <div className="flex border-b border-slate-200/80" data-tour="feedback-view-tabs">
               <button
                 type="button"
                 onClick={() => setDetailTab("plan")}
+                data-tour="feedback-tab-plan"
                 className={`border-b-2 px-4 py-2.5 text-sm font-bold transition-all ${
                   detailTab === "plan"
                     ? "border-emerald-600 text-emerald-800"
@@ -379,6 +380,7 @@ export default function InterventionFeedbackClient({ interventions }: Props) {
                 <button
                   type="button"
                   onClick={() => setDetailTab("form")}
+                  data-tour="feedback-tab-submit"
                   className={`border-b-2 px-4 py-2.5 text-sm font-bold transition-all ${
                     detailTab === "form"
                       ? "border-emerald-600 text-emerald-800"
@@ -391,6 +393,7 @@ export default function InterventionFeedbackClient({ interventions }: Props) {
               <button
                 type="button"
                 onClick={() => setDetailTab("history")}
+                data-tour="feedback-tab-history"
                 className={`border-b-2 px-4 py-2.5 text-sm font-bold transition-all flex items-center gap-1.5 ${
                   detailTab === "history"
                     ? "border-emerald-600 text-emerald-800"
@@ -408,7 +411,7 @@ export default function InterventionFeedbackClient({ interventions }: Props) {
 
             {/* TAB CONTENT: Plan details */}
             {detailTab === "plan" && (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" data-tour="feedback-plan-params">
                 <DetailField
                   label="Schedule / Frequency"
                   value={selectedIntervention.schedule}
@@ -450,11 +453,11 @@ export default function InterventionFeedbackClient({ interventions }: Props) {
 
             {/* TAB CONTENT: Submit Feedback Form */}
             {detailTab === "form" && selectedIntervention.status === "ACTIVE" && (
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" data-tour="feedback-form-panel">
                 <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3">Submit Feedback Log</h3>
                 
                 {/* Custom Styled Form Selector Tab Switching */}
-                <div className="flex flex-wrap gap-2 p-1 bg-slate-50 border border-slate-100 rounded-xl">
+                <div className="flex flex-wrap gap-2 p-1 bg-slate-50 border border-slate-100 rounded-xl" data-tour="feedback-form-type-selector">
                   {(Object.keys(TAB_META) as Tab[]).map((t) => {
                     const active = formTab === t;
                     const meta = TAB_META[t];
@@ -483,6 +486,7 @@ export default function InterventionFeedbackClient({ interventions }: Props) {
                   <textarea
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
+                    data-tour="feedback-content-input"
                     placeholder={TAB_META[formTab].placeholder}
                     rows={4}
                     disabled={pending}
@@ -495,6 +499,7 @@ export default function InterventionFeedbackClient({ interventions }: Props) {
                     </p>
                     <button
                       type="submit"
+                      data-tour="feedback-submit-btn"
                       disabled={pending || content.trim().length === 0}
                       className="rounded-xl bg-slate-900 hover:bg-slate-800 disabled:bg-slate-200 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-sm transition-colors flex items-center justify-center gap-1.5"
                     >
