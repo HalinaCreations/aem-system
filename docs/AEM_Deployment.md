@@ -204,13 +204,29 @@ return `{"ok":true}`.
 
 **Terminal** tab on the `app` service (or SSH in and `docker exec`):
 
+For a server real staff will log into, seed only the bootstrap admin:
+
 ```bash
-npm run db:seed        # required baseline — accounts + active school year
+SEED_ADMIN_ONLY=true npm run db:seed
+```
+
+That creates one ADMIN and the AlgorithmConfig the risk engine reads — nothing
+else. No school year, no demo accounts, no invented students. The account is
+flagged `mustChangePassword`, so the first sign-in is funnelled to
+`/change-password` before any other page loads; pass `SEED_ADMIN_PASSWORD` to
+avoid using the repo default even once. From there: `/admin/setup` to create
+the school year, then `/admin/import` for the staff, roster and assignment
+CSVs.
+
+For a demo or thesis-defence deployment where you want the analytics populated:
+
+```bash
+npm run db:seed        # 5 demo accounts on published passwords + a school year
 npm run db:seed:demo   # optional 3-year simulation dataset, ~21s
 ```
 
-Then **change the seeded passwords before you share the URL** — see the warning
-below.
+Those two mint credentials that are printed in this repo. **Change them before
+you share the URL** — see the warning below.
 
 ### 8. Schedule the recompute (optional)
 

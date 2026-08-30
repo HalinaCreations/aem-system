@@ -6,7 +6,53 @@ import bcrypt from "bcryptjs";
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
+// Production bootstrap. `npm run db:seed` mints five demo accounts on
+// passwords published in this repo, plus a fake school year, sections and ten
+// invented students — none of which belong on a server real staff will log
+// into. SEED_ADMIN_ONLY creates just the one ADMIN needed to reach the import
+// wizard (everything else arrives via CSV) and the AlgorithmConfig the risk
+// engine reads. No school year: the admin creates the real one at
+// /admin/setup, and every admin route already handles there being none.
+//
+//   SEED_ADMIN_ONLY=true npm run db:seed
+const ADMIN_ONLY = process.env.SEED_ADMIN_ONLY === "true";
+const ADMIN_EMAIL = "admin@school.edu";
+const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? "admin123";
+
+async function seedAdminOnly() {
+  console.log("Seeding AEM system (admin only)…");
+
+  const admin = await prisma.user.upsert({
+    where: { email: ADMIN_EMAIL },
+    update: {},
+    create: {
+      email: ADMIN_EMAIL,
+      hashedPassword: await bcrypt.hash(ADMIN_PASSWORD, 10),
+      role: "ADMIN",
+      name: "Records Officer (bootstrap)",
+      // Whoever signs in first must replace this password before reaching any
+      // other page — it is either the repo default or passed on a shell line.
+      mustChangePassword: true,
+    },
+    select: { email: true },
+  });
+
+  await seedAlgorithmConfig();
+
+  console.log("Seed complete (admin only).");
+  console.log(`  Login: ${admin.email}`);
+  if (process.env.SEED_ADMIN_PASSWORD) {
+    console.log("  Password: (from SEED_ADMIN_PASSWORD)");
+  } else {
+    console.log(`  Password: ${ADMIN_PASSWORD}  — published in this repo, change it at first sign-in`);
+  }
+  console.log("  You will be sent to /change-password before anything else.");
+  console.log("  Next: /admin/setup to create the school year, then /admin/import.");
+}
+
 async function main() {
+  if (ADMIN_ONLY) return seedAdminOnly();
+
   console.log("Seeding AEM system…");
 
   // ── School year ─────────────────────────────────────────────────────────
@@ -198,8 +244,12 @@ async function main() {
     console.log(`  ${a.email}  /  ${a.password}  (${a.role})`);
   }
 
-  // ── Default AlgorithmConfig ──────────────────────────────────────────────
-  // Version 1 ships with the Phase 4 engine. Exactly one row is active.
+  await seedAlgorithmConfig();
+}
+
+// Version 1 ships with the Phase 4 engine. Exactly one row is active. Not
+// year-scoped, so it survives deleting or replacing school years.
+async function seedAlgorithmConfig() {
   const existingConfig = await prisma.algorithmConfig.findFirst({ where: { version: 1 } });
   if (!existingConfig) {
     await prisma.algorithmConfig.create({
