@@ -127,7 +127,8 @@ export async function resetPasswordAction(formData: FormData): Promise<Result> {
   const hashed = await bcrypt.hash(parsed.data.password, 10);
   const user = await prisma.user.update({
     where: { id: parsed.data.userId },
-    data: { hashedPassword: hashed },
+    // Admin-issued password: the holder must replace it on next sign-in.
+    data: { hashedPassword: hashed, mustChangePassword: true },
     select: { id: true, email: true },
   });
 

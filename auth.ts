@@ -18,10 +18,12 @@ declare module "next-auth" {
     user: {
       id: string;
       role: Role;
+      mustChangePassword: boolean;
     } & DefaultSession["user"];
   }
   interface User {
     role: Role;
+    mustChangePassword: boolean;
   }
 }
 
@@ -29,6 +31,7 @@ declare module "@auth/core/jwt" {
   interface JWT {
     role: Role;
     userId: string;
+    mustChangePassword: boolean;
   }
 }
 
@@ -37,7 +40,7 @@ const credentialsSchema = z.object({
   password: z.string().min(1),
 });
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
   session: { strategy: "jwt" },
   pages: { signIn: "/" },
   providers: [
@@ -109,15 +112,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           name: user.name,
           role: user.role,
+          mustChangePassword: user.mustChangePassword,
         };
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.userId = user.id as string;
         token.role = user.role;
+        token.mustChangePassword = user.mustChangePassword;
+      }
+      // The flag is cleared mid-session by changePasswordAction, which calls
+      // update() — without this re-read the stale token would keep bouncing
+      // the user back to /change-password.
+      if (trigger === "update" && token.userId) {
+        const fresh = await prisma.user.findUnique({
+          where: { id: token.userId },
+          select: { role: true, mustChangePassword: true },
+        });
+        if (fresh) {
+          token.role = fresh.role;
+          token.mustChangePassword = fresh.mustChangePassword;
+        }
       }
       return token;
     },
@@ -125,6 +143,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token && session.user) {
         session.user.id = token.userId;
         session.user.role = token.role;
+        session.user.mustChangePassword = token.mustChangePassword ?? false;
       }
       return session;
     },

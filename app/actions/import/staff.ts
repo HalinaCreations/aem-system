@@ -154,6 +154,10 @@ export async function commitStaffAction(formData: FormData): Promise<StaffCommit
             role: row.role,
             status: row.status,
             hashedPassword: row.hashedPassword,
+            // Imported credentials are admin-minted, never chosen by the
+            // account holder — proxy.ts holds them at /change-password until
+            // they pick their own.
+            mustChangePassword: true,
           },
           select: { id: true },
         });
@@ -171,7 +175,8 @@ export async function commitStaffAction(formData: FormData): Promise<StaffCommit
             status: row.status,
             // null ⇒ CSV password column was blank ⇒ leave the stored hash
             // untouched; only overwrite when the CSV gave an explicit value.
-            ...(row.hashedPassword ? { hashedPassword: row.hashedPassword } : {}),
+            // A replaced password is admin-minted, so it needs choosing again.
+            ...(row.hashedPassword ? { hashedPassword: row.hashedPassword, mustChangePassword: true } : {}),
           },
           select: { id: true },
         });

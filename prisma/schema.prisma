@@ -146,6 +146,7 @@ enum AuditAction {
   SEL_ASSESSMENT_CREATED
   SEL_ASSESSMENT_READ
   REPORT_EXPORTED
+  PASSWORD_CHANGED
   AI_NARRATIVE_GENERATED
   INTERVENTION_CREATED
   INTERVENTION_ACTIVATED
@@ -242,14 +243,18 @@ enum ParticipationOutcome {
 // ─── Identity & Auth ────────────────────────────────────────────────────────
 
 model User {
-  id             String     @id @default(cuid())
-  email          String     @unique
-  hashedPassword String
-  role           Role
-  status         UserStatus @default(ACTIVE)
-  name           String
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  id                 String     @id @default(cuid())
+  email              String     @unique
+  hashedPassword     String
+  // Set when an admin mints or resets a password the user did not choose
+  // (staff CSV import, Admin -> Users reset). proxy.ts funnels the session to
+  // /change-password until the user picks their own.
+  mustChangePassword Boolean    @default(false)
+  role               Role
+  status             UserStatus @default(ACTIVE)
+  name               String
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 
   teacherAssignments    TeacherAssignment[]
   auditLogs             AuditLog[]

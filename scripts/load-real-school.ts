@@ -160,6 +160,9 @@ async function loadStaff(csvText: string): Promise<{ total: number; created: num
             role: row.role,
             status: row.status,
             hashedPassword: row.hashedPassword,
+            // Mirrors app/actions/import/staff.ts — imported credentials are
+            // admin-minted and must be replaced on first sign-in.
+            mustChangePassword: true,
           },
           select: { id: true },
         });
@@ -177,7 +180,7 @@ async function loadStaff(csvText: string): Promise<{ total: number; created: num
             status: row.status,
             // null ⇒ CSV password column was blank ⇒ leave the stored hash
             // untouched; only overwrite when the CSV gave an explicit value.
-            ...(row.hashedPassword ? { hashedPassword: row.hashedPassword } : {}),
+            ...(row.hashedPassword ? { hashedPassword: row.hashedPassword, mustChangePassword: true } : {}),
           },
           select: { id: true },
         });

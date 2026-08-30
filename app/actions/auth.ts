@@ -2,9 +2,12 @@
 
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
-import { signIn, signOut } from "@/auth";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
+import { signIn, signOut, unstable_update } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { roleLandingPath } from "@/lib/session";
+import { logAudit } from "@/lib/audit";
+import { requireSession, roleLandingPath } from "@/lib/session";
 
 export type LoginResult =
   | { ok: true; redirectTo: string }
@@ -40,4 +43,76 @@ export async function logoutAction() {
   // Logout is audited via Auth.js `events.signOut`.
   await signOut({ redirect: false });
   redirect("/");
+}
+
+const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Enter your current password"),
+    // Mirrors the 8-character floor enforced by the two other paths that mint
+    // a hashedPassword (app/actions/admin/users.ts, lib/import/staff.ts).
+    newPassword: z.string().min(8, "New password must be at least 8 characters").max(128),
+    confirmPassword: z.string().min(1, "Confirm your new password"),
+  })
+  .refine((v) => v.newPassword === v.confirmPassword, {
+    message: "New passwords do not match",
+    path: ["confirmPassword"],
+  })
+  .refine((v) => v.newPassword !== v.currentPassword, {
+    message: "New password must differ from the current one",
+    path: ["newPassword"],
+  });
+
+export type ChangePasswordResult = { ok: true; redirectTo: string } | { ok: false; error: string };
+
+export async function changePasswordAction(formData: FormData): Promise<ChangePasswordResult> {
+  const session = await requireSession();
+
+  const parsed = changePasswordSchema.safeParse({
+    currentPassword: formData.get("currentPassword"),
+    newPassword: formData.get("newPassword"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, email: true, hashedPassword: true },
+  });
+  if (!user) return { ok: false, error: "Account not found." };
+
+  const currentOk = await bcrypt.compare(parsed.data.currentPassword, user.hashedPassword);
+  if (!currentOk) {
+    await logAudit({
+      action: "LOGIN_FAILED",
+      userId: user.id,
+      resourceType: "User",
+      resourceId: user.id,
+      metadata: { reason: "bad_password", context: "change_password" },
+    });
+    return { ok: false, error: "Current password is incorrect." };
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      hashedPassword: await bcrypt.hash(parsed.data.newPassword, 10),
+      mustChangePassword: false,
+    },
+  });
+
+  await logAudit({
+    action: "PASSWORD_CHANGED",
+    userId: user.id,
+    resourceType: "User",
+    resourceId: user.id,
+    metadata: { email: user.email, self_service: true },
+  });
+
+  // Refresh the JWT so the cleared flag takes effect immediately — otherwise
+  // proxy.ts keeps redirecting back here on the stale token.
+  await unstable_update({});
+
+  return { ok: true, redirectTo: roleLandingPath(session.user.role) };
 }

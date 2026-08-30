@@ -1331,13 +1331,80 @@ is PII and `sample-import-data/` is gitignored):
 
 ### Phase 11 retrospective
 
-- **The import wizard UI path itself has not been exercised end-to-end by a
-  human.** SY 2026-2027 was loaded via `npm run db:load:school`, which shares
-  the wizard's validators (`lib/import/*.ts`) and audit calls but
-  re-implements the persistence/transaction logic rather than going through
-  `commitStaffAction` / `commitRosterAction` / `commitAssignmentsAction`
-  directly. The wizard steps ship and typecheck, but a walkthrough by a real
-  admin clicking through nine steps is still outstanding.
+- ~~**The import wizard UI path itself has not been exercised end-to-end by a
+  human.**~~ **Resolved 2026-08-30.** The three Server Actions were driven
+  directly against a running dev server with a real Auth.js admin session
+  (authenticate via `/api/auth/callback/credentials`, read the action ids out
+  of the client bundle, encode arguments with React's own `encodeReply`).
+  That exercises `requireRole`, the validators, the transactions and the audit
+  writes — everything except React rendering the file picker.
+
+  | Action | Result | Wall time |
+  |---|---|---|
+  | `commitStaffAction` | 31 created, 0 updated | 1.6s |
+  | `commitRosterAction` | 576 students · 576 enrollments · 1,728 consents · 17 sections | 3.5s |
+  | `commitAssignmentsAction` | 35 subjects · 163 assignments | 0.3s |
+
+  Audit wrote 34 rows (one aggregate `IMPORT` per file plus a per-user
+  privilege row). All 31 stored hashes verified by `bcrypt.compare` against
+  the source CSV, and a real login as the imported principal succeeded.
+
+  **Measured cost per DB round-trip: ~0.6ms.** The roster commit did roughly
+  5,800 sequential round-trips in 3.5s. Earlier prose extrapolated ~30ms/write
+  from the load script's 23s figure — that number was dominated by bcrypt
+  hashing 31 passwords, not database work, and overstated the transaction
+  timeout risk by more than an order of magnitude. The default 5s transaction
+  budget covers on the order of 8,000 operations.
+
+- **Grades / attendance / behavioral / SEL / interventions importers remain
+  unexercised**, and carry two known defects:
+  1. `Grade`, `BehavioralRecord` and `SELAssessment` have no `@@unique`
+     constraint and their importers use a bare `.create()` per row, so
+     re-importing a corrected file duplicates rather than replaces. Duplicated
+     behavioral records inflate the risk score directly — the behavioral axis
+     is a severity-weighted incident count capped at 12.
+  2. Those five commit paths run on Prisma's default 5s transaction timeout;
+     roster/staff/assignments carry `timeout: 120_000`. Reachable near the
+     10,000-row cap, not at realistic per-quarter volumes.
+
+- **`serverActions.bodySizeLimit` is unset**, so Next's 1MB default applies
+  while `lib/import/limits.ts` advertises a 5MB cap. A CSV between the two
+  fails inside the framework with an opaque error, never reaching the
+  "split the file into batches" message. Not reachable at this school's
+  volumes (roster.csv is 74KB) but reachable within the advertised cap.
+
+### Phase 11b — Forced password change (2026-08-30)
+
+Closes the gap where an admin-minted credential could never be rotated by the
+person holding it. Spec §88 already scopes admin password management; this is
+the account-holder half of it.
+
+- [x] `User.mustChangePassword Boolean @default(false)` + `PASSWORD_CHANGED`
+      audit action — migration `20260830140523_add_must_change_password`.
+- [x] Set on both paths that mint a password the holder did not choose:
+      `commitStaffAction` (create, and update when the CSV supplies a new
+      password) and `resetPasswordAction`. `scripts/load-real-school.ts`
+      mirrors this per its own sync contract.
+- [x] Carried through `authorize` → `jwt` → `session` in [auth.ts](../auth.ts).
+      The `jwt` callback re-reads the row on `trigger === "update"` so clearing
+      the flag takes effect mid-session instead of stranding a stale token.
+- [x] [proxy.ts](../proxy.ts) funnels every route to `/change-password` while
+      the flag is set. Voluntary visits stay open — this doubles as the
+      self-service change screen the system previously lacked.
+- [x] `changePasswordAction` + `/change-password`. Verifies the current
+      password, enforces the same 8-character floor as the other two paths
+      that mint a hash, rejects reuse, logs `PASSWORD_CHANGED`, and calls
+      `unstable_update` to refresh the token.
+
+Verified 2026-08-30 against a running dev server: flagged user 307s to
+`/change-password` from every route; the four validation failures return their
+specific messages; a successful change clears the flag, writes the audit row,
+issues a refreshed session cookie, and lets the same session through to
+`/teacher` with no re-login; the old password is rejected and the new one
+accepted.
+
+Not done, deliberately: no password history, expiry, or complexity rules
+beyond the length floor. Add them when there's a policy to implement.
 
 ---
 

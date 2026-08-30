@@ -10,6 +10,8 @@ const PUBLIC_PATHS = new Set<string>(["/"]);
 // present. It returns a bare ok/not-ok — no data to protect.
 const PUBLIC_PREFIXES = ["/api/auth", "/api/cron", "/api/health", "/_next", "/favicon"];
 
+const CHANGE_PASSWORD_PATH = "/change-password";
+
 const ROLE_PREFIXES: Record<string, string> = {
   "/admin": "ADMIN",
   "/teacher": "TEACHER",
@@ -35,6 +37,19 @@ export async function proxy(request: NextRequest) {
     url.pathname = "/";
     url.searchParams.set("from", pathname);
     return NextResponse.redirect(url);
+  }
+
+  // An admin-minted password (staff import, Admin -> Users reset) is a
+  // credential the user never chose. Funnel every route to the change screen
+  // until they pick their own; the role checks below still apply afterwards.
+  if (session.user.mustChangePassword) {
+    if (pathname !== CHANGE_PASSWORD_PATH) {
+      const url = request.nextUrl.clone();
+      url.pathname = CHANGE_PASSWORD_PATH;
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
   }
 
   for (const [prefix, requiredRole] of Object.entries(ROLE_PREFIXES)) {
